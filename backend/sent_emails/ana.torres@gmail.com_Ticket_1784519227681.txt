@@ -1,0 +1,4 @@
+Para: ana.torres@gmail.com
+Cliente: Ana Torres
+Tipo Documento: Ticket
+Fecha de Envío Simulada: 2026-07-19T22:47:07.682990500

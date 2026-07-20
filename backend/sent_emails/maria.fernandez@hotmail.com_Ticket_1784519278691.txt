@@ -1,0 +1,4 @@
+Para: maria.fernandez@hotmail.com
+Cliente: María Fernández
+Tipo Documento: Ticket
+Fecha de Envío Simulada: 2026-07-19T22:47:58.691254
