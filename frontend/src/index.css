@@ -38,6 +38,35 @@
   box-sizing: border-box;
 }
 
+:root.dark {
+  /* Theme colors - curate, harmonious, professional - DARK MODE */
+  --bg-primary: #0f172a;       /* Slate 900 */
+  --bg-secondary: #1e293b;     /* Slate 800 */
+  --card-bg: rgba(30, 41, 59, 0.7);
+  --card-border: rgba(255, 255, 255, 0.08);
+
+  --accent-primary: #3b82f6;      /* Lighter Blue */
+  --accent-primary-hover: #60a5fa;
+  --accent-primary-glow: rgba(59, 130, 246, 0.15);
+
+  --accent-success: #10b981;      /* Emerald 500 */
+  --accent-success-glow: rgba(16, 185, 129, 0.15);
+
+  --accent-warning: #f59e0b;      /* Amber 500 */
+  --accent-warning-glow: rgba(245, 158, 11, 0.15);
+
+  --accent-danger: #ef4444;       /* Rose 500 */
+  --accent-danger-hover: #f87171;
+  --accent-danger-glow: rgba(239, 68, 68, 0.15);
+
+  --text-main: #cbd5e1;           /* Slate 300 */
+  --text-muted: #94a3b8;          /* Slate 400 */
+  --text-highlight: #f8fafc;      /* Slate 50 */
+  
+  --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+  color-scheme: dark;
+}
+
 *, *::before, *::after {
   box-sizing: inherit;
 }
@@ -129,7 +158,7 @@ body {
   left: 0;
   width: 100vw;
   height: 60px;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--bg-secondary);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--card-border);
   align-items: center;
@@ -295,7 +324,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .input-field {
-  background: #ffffff;
+  background: var(--bg-secondary);
   border: 1px solid var(--card-border);
   border-radius: 8px;
   padding: 12px 16px;
@@ -308,12 +337,12 @@ h1, h2, h3, h4, h5, h6 {
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-  background: #ffffff;
+  background: var(--bg-secondary);
 }
 
 .select-field {
   appearance: none;
-  background: #ffffff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") no-repeat right 16px center;
+  background: var(--bg-secondary) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") no-repeat right 16px center;
   background-size: 16px;
   padding-right: 40px;
 }
@@ -391,7 +420,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .custom-table th {
-  background: #f1f5f9;
+  background: var(--bg-primary);
   color: var(--text-highlight);
   font-weight: 600;
   padding: 16px 20px;

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { api } from "../api";
 import type { Insumo, Proveedor } from "../api";
 import { Plus, Trash2, Search, Boxes, Pencil, AlertTriangle, ShoppingCart } from "lucide-react";
+import { useTranslation } from "../LanguageContext";
 
 export const Insumos: React.FC = () => {
   const [insumos, setInsumos] = useState<Insumo[]>([]);
@@ -9,6 +10,8 @@ export const Insumos: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const { language } = useTranslation();
+  const isEn = language === "en";
 
   // CRUD Form States
   const [nombre, setNombre] = useState("");
@@ -41,7 +44,7 @@ export const Insumos: React.FC = () => {
       setInsumos(insumosList);
       setProveedores(proveedoresList);
     } catch (err: any) {
-      setError(err.message || "Error al cargar datos de insumos");
+      setError(err.message || (isEn ? "Error loading ingredients" : "Error al cargar datos de insumos"));
     } finally {
       setLoading(false);
     }
@@ -72,7 +75,7 @@ export const Insumos: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre || !unidadMedida || stockActual === "") {
-      setError("Nombre, Unidad de medida y Stock Actual son obligatorios");
+      setError(isEn ? "Name, Unit of Measure and Current Stock are required" : "Nombre, Unidad de medida y Stock Actual son obligatorios");
       return;
     }
 
@@ -96,7 +99,7 @@ export const Insumos: React.FC = () => {
       handleCancel();
       loadData();
     } catch (err: any) {
-      setError(err.message || "Error al guardar el insumo");
+      setError(err.message || (isEn ? "Error saving ingredient" : "Error al guardar el insumo"));
     }
   };
 
@@ -115,12 +118,12 @@ export const Insumos: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("¿Está seguro de eliminar este insumo?")) return;
+    if (!window.confirm(isEn ? "Are you sure you want to delete this ingredient?" : "¿Está seguro de eliminar este insumo?")) return;
     try {
       await api.insumos.delete(id);
       loadData();
     } catch (err: any) {
-      alert(err.message || "No se pudo eliminar el insumo");
+      alert(err.message || (isEn ? "Could not delete ingredient" : "No se pudo eliminar el insumo"));
     }
   };
 
@@ -142,7 +145,7 @@ export const Insumos: React.FC = () => {
 
     const qty = parseFloat(cantidadCompra);
     if (isNaN(qty) || qty <= 0) {
-      setBuyError("La cantidad debe ser mayor a 0");
+      setBuyError(isEn ? "Quantity must be greater than 0" : "La cantidad debe ser mayor a 0");
       return;
     }
 
@@ -152,7 +155,7 @@ export const Insumos: React.FC = () => {
       handleCancelCompra();
       loadData();
     } catch (err: any) {
-      setBuyError(err.message || "Error al realizar la compra");
+      setBuyError(err.message || (isEn ? "Error making purchase" : "Error al realizar la compra"));
     } finally {
       setBuyLoading(false);
     }
@@ -178,9 +181,11 @@ export const Insumos: React.FC = () => {
     <div className="animate-fade-in view-layout">
       <div className="view-header">
         <div>
-          <h1 className="page-title">Gestión de Insumos</h1>
+          <h1 className="page-title">{isEn ? "Stock & Ingredients Management" : "Gestión de Insumos"}</h1>
           <p className="page-subtitle">
-            Administra el stock, costos y proveedores de las materias primas del restaurante
+            {isEn 
+              ? "Manage stock levels, unit costs, and suppliers of raw materials" 
+              : "Administra el stock, costos y proveedores de las materias primas del restaurante"}
           </p>
         </div>
         <button
@@ -194,7 +199,7 @@ export const Insumos: React.FC = () => {
           }}
         >
           <Plus size={18} />
-          {formOpen ? "Ocultar Formulario" : "Nuevo Insumo"}
+          {formOpen ? (isEn ? "Hide Form" : "Ocultar Formulario") : (isEn ? "New Ingredient" : "Nuevo Insumo")}
         </button>
       </div>
 
@@ -203,17 +208,17 @@ export const Insumos: React.FC = () => {
       {formOpen && (
         <form onSubmit={handleSubmit} className="glass-panel form-card animate-fade-in">
           <h2 className="form-title">
-            {editingInsumoId !== null ? "📝 Modificar Insumo" : "📦 Registrar Nuevo Insumo"}
+            {editingInsumoId !== null ? (isEn ? "📝 Edit Ingredient" : "📝 Modificar Insumo") : (isEn ? "📦 Register New Ingredient" : "📦 Registrar Nuevo Insumo")}
           </h2>
 
           <div className="form-grid">
             <div className="form-grid-2">
               <div className="form-group">
-                <label className="form-label">Nombre del Insumo</label>
+                <label className="form-label">{isEn ? "Ingredient Name" : "Nombre del Insumo"}</label>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="Ej. Tomate Italiano"
+                  placeholder={isEn ? "e.g. Italian Tomato" : "Ej. Tomate Italiano"}
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   required
@@ -221,11 +226,11 @@ export const Insumos: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Categoría</label>
+                <label className="form-label">{isEn ? "Category" : "Categoría"}</label>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="Ej. Verduras, Carnes, Abarrotes"
+                  placeholder={isEn ? "e.g. Vegetables, Meats, Groceries" : "Ej. Verduras, Carnes, Abarrotes"}
                   value={categoria}
                   onChange={(e) => setCategoria(e.target.value)}
                 />
@@ -234,31 +239,31 @@ export const Insumos: React.FC = () => {
 
             <div className="form-grid-3">
               <div className="form-group">
-                <label className="form-label">Unidad de Medida</label>
+                <label className="form-label">{isEn ? "Unit of Measure" : "Unidad de Medida"}</label>
                 <select
                   className="input-field"
                   value={unidadMedida}
                   onChange={(e) => setUnidadMedida(e.target.value)}
                   required
                 >
-                  <option value="kg">Kilogramos (kg)</option>
-                  <option value="g">Gramos (g)</option>
-                  <option value="L">Litros (L)</option>
-                  <option value="ml">Mililitros (ml)</option>
-                  <option value="unidades">Unidades</option>
-                  <option value="paquetes">Paquetes</option>
-                  <option value="cajas">Cajas</option>
+                  <option value="kg">{isEn ? "Kilograms (kg)" : "Kilogramos (kg)"}</option>
+                  <option value="g">{isEn ? "Grams (g)" : "Gramos (g)"}</option>
+                  <option value="L">{isEn ? "Liters (L)" : "Litros (L)"}</option>
+                  <option value="ml">{isEn ? "Milliliters (ml)" : "Mililitros (ml)"}</option>
+                  <option value="unidades">{isEn ? "Units" : "Unidades"}</option>
+                  <option value="paquetes">{isEn ? "Packages" : "Paquetes"}</option>
+                  <option value="cajas">{isEn ? "Boxes" : "Cajas"}</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Stock Actual</label>
+                <label className="form-label">{isEn ? "Current Stock" : "Stock Actual"}</label>
                 <input
                   type="number"
                   step="0.01"
                   min="0"
                   className="input-field"
-                  placeholder="Ej. 10.50"
+                  placeholder={isEn ? "e.g. 10.50" : "Ej. 10.50"}
                   value={stockActual}
                   onChange={(e) => setStockActual(e.target.value)}
                   required
@@ -267,13 +272,13 @@ export const Insumos: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Stock Mínimo Alerta</label>
+                <label className="form-label">{isEn ? "Min Alert Stock" : "Stock Mínimo Alerta"}</label>
                 <input
                   type="number"
                   step="0.01"
                   min="0"
                   className="input-field"
-                  placeholder="Ej. 2.00"
+                  placeholder={isEn ? "e.g. 2.00" : "Ej. 2.00"}
                   value={stockMinimo}
                   onChange={(e) => setStockMinimo(e.target.value)}
                 />
@@ -282,36 +287,36 @@ export const Insumos: React.FC = () => {
 
             <div className="form-grid-3">
               <div className="form-group">
-                <label className="form-label">Costo Unitario ($)</label>
+                <label className="form-label">{isEn ? "Unit Cost ($)" : "Costo Unitario ($)"}</label>
                 <input
                   type="number"
                   step="0.01"
                   min="0"
                   className="input-field"
-                  placeholder="Ej. 1.80"
+                  placeholder={isEn ? "e.g. 1.80" : "Ej. 1.80"}
                   value={costoUnitario}
                   onChange={(e) => setCostoUnitario(e.target.value)}
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Proveedor</label>
+                <label className="form-label">{isEn ? "Supplier" : "Proveedor"}</label>
                 <select
                   className="input-field"
                   value={proveedorId}
                   onChange={(e) => setProveedorId(e.target.value)}
                 >
-                  <option value="">Seleccionar Proveedor</option>
+                  <option value="">{isEn ? "Select Supplier" : "Seleccionar Proveedor"}</option>
                   {proveedores.map((p) => (
                     <option key={p.proveedorId} value={p.proveedorId}>
-                      {p.nombre} ({p.tipoInsumo || "General"})
+                      {p.nombre} ({p.tipoInsumo || (isEn ? "General" : "General")})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Estado</label>
+                <label className="form-label">{isEn ? "Status" : "Estado"}</label>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px" }}>
                   <input
                     type="checkbox"
@@ -321,7 +326,7 @@ export const Insumos: React.FC = () => {
                     onChange={(e) => setEstado(e.target.checked)}
                   />
                   <label htmlFor="estadoCheck" style={{ color: "var(--text-main)", cursor: "pointer" }}>
-                    Insumo Activo
+                    {isEn ? "Active Ingredient" : "Insumo Activo"}
                   </label>
                 </div>
               </div>
@@ -330,10 +335,10 @@ export const Insumos: React.FC = () => {
 
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={handleCancel}>
-              Cancelar
+              {isEn ? "Cancel" : "Cancelar"}
             </button>
             <button type="submit" className="btn btn-primary">
-              {editingInsumoId !== null ? "Guardar Cambios" : "Guardar Insumo"}
+              {editingInsumoId !== null ? (isEn ? "Save Changes" : "Guardar Cambios") : (isEn ? "Save Ingredient" : "Guardar Insumo")}
             </button>
           </div>
         </form>
@@ -344,7 +349,7 @@ export const Insumos: React.FC = () => {
         <input
           type="text"
           className="search-input"
-          placeholder="Buscar insumos por nombre o categoría..."
+          placeholder={isEn ? "Search ingredients by name or category..." : "Buscar insumos por nombre o categoría..."}
           value={search}
           onChange={handleSearchChange}
         />
@@ -354,27 +359,27 @@ export const Insumos: React.FC = () => {
         {loading ? (
           <div className="loading-container">
             <div className="spinner"></div>
-            <span>Cargando listado de insumos...</span>
+            <span>{isEn ? "Loading ingredients list..." : "Cargando listado de insumos..."}</span>
           </div>
         ) : insumos.length === 0 ? (
           <div className="empty-container">
             <Boxes size={48} className="empty-icon" />
-            <h3>No hay insumos registrados</h3>
-            <p>Registre insumos para controlar su inventario de ingredientes.</p>
+            <h3>{isEn ? "No ingredients registered" : "No hay insumos registrados"}</h3>
+            <p>{isEn ? "Register ingredients to control your inventory." : "Registre insumos para controlar su inventario de ingredientes."}</p>
           </div>
         ) : (
           <div className="table-container">
             <table className="custom-table">
               <thead>
                 <tr>
-                  <th>Nombre</th>
-                  <th>Categoría</th>
-                  <th>Stock Actual</th>
-                  <th>Stock Mínimo</th>
-                  <th>Costo Unitario</th>
-                  <th>Proveedor</th>
-                  <th>Estado</th>
-                  <th style={{ textAlign: "center" }}>Acciones</th>
+                  <th>{isEn ? "Name" : "Nombre"}</th>
+                  <th>{isEn ? "Category" : "Categoría"}</th>
+                  <th>{isEn ? "Current Stock" : "Stock Actual"}</th>
+                  <th>{isEn ? "Min Stock" : "Stock Mínimo"}</th>
+                  <th>{isEn ? "Unit Cost" : "Costo Unitario"}</th>
+                  <th>{isEn ? "Supplier" : "Proveedor"}</th>
+                  <th>{isEn ? "Status" : "Estado"}</th>
+                  <th style={{ textAlign: "center" }}>{isEn ? "Actions" : "Acciones"}</th>
                 </tr>
                 <tr className="filter-row">
                   <td></td>
@@ -384,7 +389,7 @@ export const Insumos: React.FC = () => {
                       value={filterCategoria}
                       onChange={(e) => setFilterCategoria(e.target.value)}
                     >
-                      <option value="">Todas las categorías</option>
+                      <option value="">{isEn ? "All categories" : "Todas las categorías"}</option>
                       {uniqueCategorias.map((cat) => (
                         <option key={cat} value={cat}>
                           {cat}
@@ -423,9 +428,9 @@ export const Insumos: React.FC = () => {
                             {insumo.stockActual.toFixed(2)} {insumo.unidadMedida}
                           </span>
                           {isLowStock && (
-                            <span className="warning-badge" title="Stock por debajo del mínimo">
+                            <span className="warning-badge" title={isEn ? "Stock below minimum" : "Stock por debajo del mínimo"}>
                               <AlertTriangle size={14} />
-                              <span>Bajo Stock</span>
+                              <span>{isEn ? "Low Stock" : "Bajo Stock"}</span>
                             </span>
                           )}
                         </div>
@@ -447,7 +452,7 @@ export const Insumos: React.FC = () => {
                       <td>{insumo.proveedor ? insumo.proveedor.nombre : "-"}</td>
                       <td>
                         <span className={insumo.estado ? "status-activo" : "status-inactivo"}>
-                          {insumo.estado ? "Activo" : "Inactivo"}
+                          {insumo.estado ? (isEn ? "Active" : "Activo") : (isEn ? "Inactive" : "Inactivo")}
                         </span>
                       </td>
                       <td style={{ textAlign: "center" }}>
@@ -455,21 +460,21 @@ export const Insumos: React.FC = () => {
                           <button
                             className="btn-icon btn-icon-success"
                             onClick={() => handleStartCompra(insumo)}
-                            title="Comprar insumo (abastecer)"
+                            title={isEn ? "Buy ingredient (supply)" : "Comprar insumo (abastecer)"}
                           >
                             <ShoppingCart size={16} />
                           </button>
                           <button
                             className="btn-icon btn-icon-warning"
                             onClick={() => handleStartEdit(insumo)}
-                            title="Modificar insumo"
+                            title={isEn ? "Edit ingredient" : "Modificar insumo"}
                           >
                             <Pencil size={16} />
                           </button>
                           <button
                             className="btn-icon btn-icon-danger"
                             onClick={() => handleDelete(insumo.insumoId)}
-                            title="Eliminar insumo"
+                            title={isEn ? "Delete ingredient" : "Eliminar insumo"}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -494,7 +499,7 @@ export const Insumos: React.FC = () => {
             <div className="modal-header">
               <div className="modal-title-group">
                 <ShoppingCart size={20} className="text-success" />
-                <h3>Comprar Insumo</h3>
+                <h3>{isEn ? "Buy Ingredient" : "Comprar Insumo"}</h3>
               </div>
               <button className="close-btn" onClick={handleCancelCompra}>
                 &times;
@@ -508,31 +513,31 @@ export const Insumos: React.FC = () => {
                 <div className="insumo-info-box">
                   <h4>{buyingInsumo.nombre}</h4>
                   <p>
-                    Categoría:{" "}
-                    <span className="text-white">{buyingInsumo.categoria || "Sin categoría"}</span>
+                    {isEn ? "Category" : "Categoría"}:{" "}
+                    <span className="text-white">{buyingInsumo.categoria || (isEn ? "No category" : "Sin categoría")}</span>
                   </p>
                   <p>
-                    Stock Actual:{" "}
+                    {isEn ? "Current Stock" : "Stock Actual"}:{" "}
                     <span className="text-white">
                       {buyingInsumo.stockActual.toFixed(2)} {buyingInsumo.unidadMedida}
                     </span>
                   </p>
                   {buyingInsumo.proveedor && (
                     <p>
-                      Proveedor:{" "}
+                      {isEn ? "Supplier" : "Proveedor"}:{" "}
                       <span className="text-white">{buyingInsumo.proveedor.nombre}</span>
                     </p>
                   )}
                 </div>
 
                 <div className="form-group" style={{ marginTop: "16px" }}>
-                  <label className="form-label">Cantidad a Comprar ({buyingInsumo.unidadMedida})</label>
+                  <label className="form-label">{isEn ? `Quantity to Buy (${buyingInsumo.unidadMedida})` : `Cantidad a Comprar (${buyingInsumo.unidadMedida})`}</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0.01"
                     className="input-field"
-                    placeholder="Ej. 12.50"
+                    placeholder={isEn ? "e.g. 12.50" : "Ej. 12.50"}
                     value={cantidadCompra}
                     onChange={(e) => setCantidadCompra(e.target.value)}
                     required
@@ -542,7 +547,7 @@ export const Insumos: React.FC = () => {
 
                 {cantidadCompra && !isNaN(parseFloat(cantidadCompra)) && parseFloat(cantidadCompra) > 0 && (
                   <div className="stock-preview-box">
-                    <span>Nuevo Stock Estimado:</span>
+                    <span>{isEn ? "New Estimated Stock:" : "Nuevo Stock Estimado:"}</span>
                     <strong className="text-success" style={{ marginLeft: "8px" }}>
                       {(buyingInsumo.stockActual + parseFloat(cantidadCompra)).toFixed(2)}{" "}
                       {buyingInsumo.unidadMedida}
@@ -558,14 +563,14 @@ export const Insumos: React.FC = () => {
                   onClick={handleCancelCompra}
                   disabled={buyLoading}
                 >
-                  Cancelar
+                  {isEn ? "Cancel" : "Cancelar"}
                 </button>
                 <button
                   type="submit"
                   className="btn btn-primary"
                   disabled={buyLoading}
                 >
-                  {buyLoading ? "Procesando..." : "Confirmar Compra"}
+                  {buyLoading ? (isEn ? "Processing..." : "Procesando...") : (isEn ? "Confirm Purchase" : "Confirmar Compra")}
                 </button>
               </div>
             </form>

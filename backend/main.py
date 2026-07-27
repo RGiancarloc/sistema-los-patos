@@ -719,7 +719,7 @@ def get_analitica_kpis(
 # --- MACHINE LEARNING & PREDICTION PIPELINE ---
 
 @app.post("/api/predicts/train")
-def train_prediction_models(db: Session = Depends(get_db)):
+def train_prediction_models(lang: str = "es", db: Session = Depends(get_db)):
     """
     Fases 1 y 2: Ejecuta EDA, entrena 3 clásicos y 2 híbridos,
     genera curvas y graba el mejor modelo.
@@ -731,7 +731,7 @@ def train_prediction_models(db: Session = Depends(get_db)):
     X, y, df, enc = preprocess_data(df)
     
     # Run training
-    train_results, best_name, y_test, preds_test = train_models(X, y, df)
+    train_results, best_name, y_test, preds_test = train_models(X, y, df, lang=lang)
     
     # Extract EDA descriptives
     eda_stats = run_eda(df)
@@ -786,7 +786,7 @@ def tune_hyperparameters(db: Session = Depends(get_db)):
     return tuning_res
 
 @app.get("/api/predicts/statistical_tests")
-def get_statistical_tests(db: Session = Depends(get_db)):
+def get_statistical_tests(lang: str = "es", db: Session = Depends(get_db)):
     """
     Fase 5: Pruebas estadísticas robustas (Wilcoxon & T-Test).
     """
@@ -796,22 +796,22 @@ def get_statistical_tests(db: Session = Depends(get_db)):
     X, y, df, _ = preprocess_data(df)
     
     # Train/get predictions on test set
-    train_results, best_name, y_test, preds_test = train_models(X, y, df)
+    train_results, best_name, y_test, preds_test = train_models(X, y, df, lang=lang)
     tests = run_statistical_tests(y_test, preds_test, best_name)
     return tests
 
 @app.get("/api/predicts/forecast")
-def get_forecast(db: Session = Depends(get_db)):
+def get_forecast(lang: str = "es", db: Session = Depends(get_db)):
     """
     Inference: Runs forecast for the next 7 days using the best model.
     """
-    return run_demand_forecast(db)
+    return run_demand_forecast(db, lang=lang)
 
 
 # --- DOWNLOADABLE REPORT ROUTERS ---
 
 @app.get("/api/predicts/reports/pdf")
-def get_pdf_report_download(db: Session = Depends(get_db)):
+def get_pdf_report_download(lang: str = "es", db: Session = Depends(get_db)):
     """
     Fase 6: Genera y descarga el reporte PDF.
     """
@@ -821,18 +821,18 @@ def get_pdf_report_download(db: Session = Depends(get_db)):
     X, y, df, _ = preprocess_data(df)
     
     # Re-train models to get final metrics
-    train_results, best_name, y_test, preds_test = train_models(X, y, df)
+    train_results, best_name, y_test, preds_test = train_models(X, y, df, lang=lang)
     eda_stats = run_eda(df)
     stat_tests = run_statistical_tests(y_test, preds_test, best_name)
-    forecast_data = run_demand_forecast(db)
+    forecast_data = run_demand_forecast(db, lang=lang)
     
-    pdf_path = os.path.join(STATIC_DIR, "reporte_demanda.pdf")
-    generate_pdf_report(eda_stats, train_results, best_name, stat_tests, forecast_data, pdf_path)
+    pdf_path = os.path.join(STATIC_DIR, f"reporte_demanda_{lang}.pdf")
+    generate_pdf_report(eda_stats, train_results, best_name, stat_tests, forecast_data, pdf_path, lang=lang)
     
-    return FileResponse(pdf_path, media_type="application/pdf", filename="reporte_analitica_demanda.pdf")
+    return FileResponse(pdf_path, media_type="application/pdf", filename=f"reporte_analitica_demanda_{lang}.pdf")
 
 @app.get("/api/predicts/reports/word")
-def get_word_report_download(db: Session = Depends(get_db)):
+def get_word_report_download(lang: str = "es", db: Session = Depends(get_db)):
     """
     Fase 6: Genera y descarga el reporte Word (Docx).
     """
@@ -841,18 +841,18 @@ def get_word_report_download(db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Datos vacíos.")
     X, y, df, _ = preprocess_data(df)
     
-    train_results, best_name, y_test, preds_test = train_models(X, y, df)
+    train_results, best_name, y_test, preds_test = train_models(X, y, df, lang=lang)
     eda_stats = run_eda(df)
     stat_tests = run_statistical_tests(y_test, preds_test, best_name)
-    forecast_data = run_demand_forecast(db)
+    forecast_data = run_demand_forecast(db, lang=lang)
     
-    word_path = os.path.join(STATIC_DIR, "reporte_demanda.docx")
-    generate_word_report(eda_stats, train_results, best_name, stat_tests, forecast_data, word_path)
+    word_path = os.path.join(STATIC_DIR, f"reporte_demanda_{lang}.docx")
+    generate_word_report(eda_stats, train_results, best_name, stat_tests, forecast_data, word_path, lang=lang)
     
-    return FileResponse(word_path, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", filename="reporte_cientifico_demanda.docx")
+    return FileResponse(word_path, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", filename=f"reporte_cientifico_demanda_{lang}.docx")
 
 @app.get("/api/predicts/reports/excel")
-def get_excel_report_download(db: Session = Depends(get_db)):
+def get_excel_report_download(lang: str = "es", db: Session = Depends(get_db)):
     """
     Fase 6: Genera y descarga el reporte Excel (Xlsx).
     """
@@ -861,15 +861,15 @@ def get_excel_report_download(db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Datos vacíos.")
     X, y, df, _ = preprocess_data(df)
     
-    train_results, best_name, y_test, preds_test = train_models(X, y, df)
+    train_results, best_name, y_test, preds_test = train_models(X, y, df, lang=lang)
     eda_stats = run_eda(df)
     stat_tests = run_statistical_tests(y_test, preds_test, best_name)
-    forecast_data = run_demand_forecast(db)
+    forecast_data = run_demand_forecast(db, lang=lang)
     
-    excel_path = os.path.join(STATIC_DIR, "reporte_demanda.xlsx")
-    generate_excel_report(eda_stats, train_results, best_name, stat_tests, forecast_data, excel_path)
+    excel_path = os.path.join(STATIC_DIR, f"reporte_demanda_{lang}.xlsx")
+    generate_excel_report(eda_stats, train_results, best_name, stat_tests, forecast_data, excel_path, lang=lang)
     
-    return FileResponse(excel_path, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename="hoja_metricas_prediccion.xlsx")
+    return FileResponse(excel_path, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename=f"hoja_metricas_prediccion_{lang}.xlsx")
 
 
 # Add compatible backward router for older reports

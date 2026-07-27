@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { api } from "../api";
 import type { Mesa, Cliente, Producto, Usuario } from "../api";
 import { ShoppingCart, User, Utensils, Trash2, Plus, Minus, Search, Tag, Calculator, CreditCard, Banknote, X } from "lucide-react";
+import { useTranslation } from "../LanguageContext";
 
 interface VentasProps {
   usuario: Usuario;
@@ -14,6 +15,8 @@ interface CartItem {
 }
 
 export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
+  const { language } = useTranslation();
+  const isEn = language === "en";
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -56,13 +59,13 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
         setClientes(cList);
         setProductos(pList);
       } catch (err: any) {
-        setError("Error al cargar la información operativa");
+        setError(isEn ? "Error loading POS data" : "Error al cargar la información operativa");
       } finally {
         setLoading(false);
       }
     };
     loadPOSData();
-  }, []);
+  }, [isEn]);
 
   const categories = ["todos", ...Array.from(new Set(productos.map((p) => p.categoria).filter(Boolean)))];
 
@@ -106,7 +109,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
   const handleOpenPaymentModal = (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) {
-      setError("El carrito de compras está vacío");
+      setError(isEn ? "The shopping cart is empty" : "El carrito de compras está vacío");
       return;
     }
     setError("");
@@ -140,7 +143,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
       };
 
       const res = await api.ventas.create(data);
-      setSuccess(`¡Venta #${res.ventaId} registrada con éxito!`);
+      setSuccess(isEn ? `Sale #${res.ventaId} registered successfully!` : `¡Venta #${res.ventaId} registrada con éxito!`);
       // Reset
       setCart([]);
       setSelectedMesa("");
@@ -154,7 +157,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
         setSuccess("");
       }, 3000);
     } catch (err: any) {
-      setError(err.message || "Error al procesar la venta");
+      setError(err.message || (isEn ? "Error processing sale" : "Error al procesar la venta"));
       setShowPaymentModal(false);
     }
   };
@@ -162,7 +165,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
   const handleClientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientNombre) {
-      setClientError("El nombre es requerido");
+      setClientError(isEn ? "Name is required" : "El nombre es requerido");
       return;
     }
 
@@ -194,7 +197,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
       setClientMetodoPago("tarjeta");
       setClientError("");
     } catch (err: any) {
-      setClientError(err.message || "Error al guardar el cliente");
+      setClientError(err.message || (isEn ? "Error saving customer" : "Error al guardar el cliente"));
     }
   };
 
@@ -209,7 +212,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
       <div className="checkout-panel glass-panel">
         <div className="panel-header">
           <ShoppingCart size={20} className="text-primary" />
-          <h2>Detalle del Pedido</h2>
+          <h2>{isEn ? "Order Details" : "Detalle del Pedido"}</h2>
         </div>
 
         {error && <div className="error-banner">{error}</div>}
@@ -219,17 +222,17 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
           <div className="pos-meta">
             <div className="form-group">
               <label className="form-label">
-                <Utensils size={14} style={{ marginRight: 6 }} /> Mesa
+                <Utensils size={14} style={{ marginRight: 6 }} /> {isEn ? "Table" : "Mesa"}
               </label>
               <select
                 className="input-field select-field"
                 value={selectedMesa}
                 onChange={(e) => setSelectedMesa(e.target.value)}
               >
-                <option value="">-- Para Llevar --</option>
+                <option value="">-- {isEn ? "To Go" : "Para Llevar"} --</option>
                 {mesas.map((m) => (
                   <option key={m.mesaId} value={m.mesaId}>
-                    Mesa {m.numeroMesa} ({m.estadoActual})
+                    {isEn ? `Table ${m.numeroMesa}` : `Mesa ${m.numeroMesa}`} ({isEn && m.estadoActual === "disponible" ? "available" : isEn && m.estadoActual === "ocupada" ? "occupied" : isEn && m.estadoActual === "reservada" ? "reserved" : m.estadoActual})
                   </option>
                 ))}
               </select>
@@ -237,7 +240,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
 
             <div className="form-group">
               <label className="form-label">
-                <User size={14} style={{ marginRight: 6 }} /> Cliente
+                <User size={14} style={{ marginRight: 6 }} /> {isEn ? "Customer" : "Cliente"}
               </label>
               <select
                 className="input-field select-field"
@@ -256,9 +259,9 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
                   }
                 }}
               >
-                <option value="">-- Consumidor Final --</option>
+                <option value="">-- {isEn ? "Final Consumer" : "Consumidor Final"} --</option>
                 <option value="new_client" style={{ fontWeight: "bold", color: "var(--accent-primary)" }}>
-                  + Registrar Nuevo Cliente
+                  + {isEn ? "Register New Customer" : "Registrar Nuevo Cliente"}
                 </option>
                 {clientes.map((c) => (
                   <option key={c.clienteId} value={c.clienteId}>
@@ -273,14 +276,14 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
             {cart.length === 0 ? (
               <div className="empty-cart">
                 <ShoppingCart size={32} className="empty-cart-icon" />
-                <p>El pedido está vacío. Seleccione productos de la lista.</p>
+                <p>{isEn ? "The order is empty. Select products from the list." : "El pedido está vacío. Seleccione productos de la lista."}</p>
               </div>
             ) : (
               cart.map((item) => (
                 <div key={item.producto.productoId} className="cart-item glass-card">
                   <div className="cart-item-info">
                     <span className="cart-item-name">{item.producto.nombre}</span>
-                    <span className="cart-item-price">${item.precioUnitario.toFixed(2)} c/u</span>
+                    <span className="cart-item-price">${item.precioUnitario.toFixed(2)} {isEn ? "each" : "c/u"}</span>
                   </div>
                   <div className="cart-item-controls">
                     <button type="button" className="btn-qty" onClick={() => updateQuantity(item.producto.productoId, -1)}>
@@ -301,7 +304,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
 
           <div className="pos-addons border-top">
             <div className="form-group">
-              <label className="form-label">Descuento ($)</label>
+              <label className="form-label">{isEn ? "Discount ($)" : "Descuento ($)"}</label>
               <input
                 type="number"
                 min="0"
@@ -313,7 +316,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Propina ($)</label>
+              <label className="form-label">{isEn ? "Tip ($)" : "Propina ($)"}</label>
               <input
                 type="number"
                 min="0"
@@ -332,30 +335,30 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
               <span>${subtotal.toFixed(2)}</span>
             </div>
             <div className="total-row">
-              <span>Impuestos (18%):</span>
+              <span>{isEn ? "Taxes (18%):" : "Impuestos (18%):"}</span>
               <span>${impuestos.toFixed(2)}</span>
             </div>
             {valDescuento > 0 && (
               <div className="total-row text-danger">
-                <span>Descuento:</span>
+                <span>{isEn ? "Discount:" : "Descuento:"}</span>
                 <span>-${valDescuento.toFixed(2)}</span>
               </div>
             )}
             {valPropina > 0 && (
               <div className="total-row text-success">
-                <span>Propina:</span>
+                <span>{isEn ? "Tip:" : "Propina:"}</span>
                 <span>+${valPropina.toFixed(2)}</span>
               </div>
             )}
             <div className="total-row grand-total">
-              <span>Total Final:</span>
+              <span>{isEn ? "Final Total:" : "Total Final:"}</span>
               <span>${total.toFixed(2)}</span>
             </div>
           </div>
 
           <button type="submit" className="btn btn-primary submit-order-btn" disabled={cart.length === 0}>
             <Calculator size={18} />
-            <span>Confirmar y Cobrar</span>
+            <span>{isEn ? "Confirm & Checkout" : "Confirmar y Cobrar"}</span>
           </button>
         </form>
       </div>
@@ -366,7 +369,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
             <Search size={16} className="search-icon" />
             <input
               type="text"
-              placeholder="Buscar plato o bebida..."
+              placeholder={isEn ? "Search dish or drink..." : "Buscar plato o bebida..."}
               value={searchProduct}
               onChange={(e) => setSearchProduct(e.target.value)}
             />
@@ -380,7 +383,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
               className={`category-tab ${filterCategory === cat ? "active" : ""}`}
               onClick={() => setFilterCategory(cat)}
             >
-              {cat.toUpperCase()}
+              {isEn && cat === "todos" ? "ALL" : isEn && cat === "Bebidas" ? "DRINKS" : isEn && cat === "Entradas" ? "STARTERS" : isEn && cat === "Platos Principales" ? "MAIN DISHES" : isEn && cat === "Postres" ? "DESSERTS" : cat.toUpperCase()}
             </button>
           ))}
         </div>
@@ -388,18 +391,18 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
         {loading ? (
           <div className="loading-container">
             <div className="spinner"></div>
-            <span>Cargando catálogo operativo...</span>
+            <span>{isEn ? "Loading active catalog..." : "Cargando catálogo operativo..."}</span>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="empty-container">
             <Tag size={36} className="empty-icon" />
-            <p>No se encontraron productos coincidentes.</p>
+            <p>{isEn ? "No matching products found." : "No se encontraron productos coincidentes."}</p>
           </div>
         ) : (
           <div className="menu-grid">
             {filteredProducts.map((prod) => (
               <div key={prod.productoId} className="glass-card menu-card animate-fade-in" onClick={() => addToCart(prod)}>
-                <div className="menu-card-category">{prod.categoria}</div>
+                <div className="menu-card-category">{isEn && prod.categoria === "Bebidas" ? "Drinks" : isEn && prod.categoria === "Entradas" ? "Starters" : isEn && prod.categoria === "Platos Principales" ? "Main Dishes" : isEn && prod.categoria === "Postres" ? "Desserts" : prod.categoria}</div>
                 <h3 className="menu-card-title">{prod.nombre}</h3>
                 <div className="menu-card-footer">
                   <span className="menu-card-price">${prod.precioVenta.toFixed(2)}</span>
@@ -973,7 +976,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
             <div className="modal-header">
               <div className="modal-title-group">
                 <Calculator size={20} className="text-primary" />
-                <h3>Detalle del Pago</h3>
+                <h3>{isEn ? "Payment Details" : "Detalle del Pago"}</h3>
               </div>
               <button
                 type="button"
@@ -988,23 +991,23 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
               {/* Order Summary */}
               <div className="payment-summary">
                 <div className="summary-row">
-                  <span>Mesa:</span>
+                  <span>{isEn ? "Table:" : "Mesa:"}</span>
                   <span className="text-white">
                     {selectedMesa
-                      ? `Mesa ${mesas.find((m) => m.mesaId.toString() === selectedMesa)?.numeroMesa}`
-                      : "Para Llevar"}
+                      ? (isEn ? `Table ${mesas.find((m) => m.mesaId.toString() === selectedMesa)?.numeroMesa}` : `Mesa ${mesas.find((m) => m.mesaId.toString() === selectedMesa)?.numeroMesa}`)
+                      : (isEn ? "To Go" : "Para Llevar")}
                   </span>
                 </div>
                 <div className="summary-row">
-                  <span>Cliente:</span>
+                  <span>{isEn ? "Customer:" : "Cliente:"}</span>
                   <span className="text-white">
                     {selectedCliente
                       ? clientes.find((c) => c.clienteId.toString() === selectedCliente)?.nombre
-                      : "Consumidor Final"}
+                      : (isEn ? "Final Consumer" : "Consumidor Final")}
                   </span>
                 </div>
                 <div className="summary-row total-highlight">
-                  <span>Total a Cobrar:</span>
+                  <span>{isEn ? "Total to Charge:" : "Total a Cobrar:"}</span>
                   <span className="text-success text-2xl font-black">
                     ${total.toFixed(2)}
                   </span>
@@ -1020,7 +1023,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
                   onClick={() => setPaymentMethod("efectivo")}
                 >
                   <Banknote size={28} className="payment-icon text-success" />
-                  <span className="payment-label">Efectivo</span>
+                  <span className="payment-label">{isEn ? "Cash" : "Efectivo"}</span>
                 </div>
                 <div
                   className={`payment-method-card glass-card ${
@@ -1029,7 +1032,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
                   onClick={() => setPaymentMethod("tarjeta")}
                 >
                   <CreditCard size={28} className="payment-icon text-primary" />
-                  <span className="payment-label">Tarjeta</span>
+                  <span className="payment-label">{isEn ? "Card" : "Tarjeta"}</span>
                 </div>
               </div>
 
@@ -1037,7 +1040,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
               {paymentMethod === "efectivo" && (
                 <div className="cash-details animate-fade-in">
                   <div className="form-group">
-                    <label className="form-label">Monto Recibido ($)</label>
+                    <label className="form-label">{isEn ? "Amount Received ($)" : "Monto Recibido ($)"}</label>
                     <input
                       type="number"
                       min="0"
@@ -1051,7 +1054,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
                   </div>
                   {parseFloat(cashReceived) > 0 && (
                     <div className="change-display">
-                      <span className="change-label">Vuelto:</span>
+                      <span className="change-label">{isEn ? "Change:" : "Vuelto:"}</span>
                       <span
                         className={`change-val ${
                           parseFloat(cashReceived) >= total
@@ -1061,7 +1064,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
                       >
                         {parseFloat(cashReceived) >= total
                           ? `$${(parseFloat(cashReceived) - total).toFixed(2)}`
-                          : "Monto insuficiente"}
+                          : (isEn ? "Insufficient amount" : "Monto insuficiente")}
                       </span>
                     </div>
                   )}
@@ -1075,7 +1078,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
                 className="btn btn-secondary"
                 onClick={() => setShowPaymentModal(false)}
               >
-                Cancelar
+                {isEn ? "Cancel" : "Cancelar"}
               </button>
               <button
                 type="button"
@@ -1086,7 +1089,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
                   (!cashReceived || parseFloat(cashReceived) < total)
                 }
               >
-                Confirmar Pago
+                {isEn ? "Confirm Payment" : "Confirmar Pago"}
               </button>
             </div>
           </div>
@@ -1099,7 +1102,7 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
             <div className="modal-header">
               <div className="modal-title-group">
                 <User size={20} className="text-primary" />
-                <h3>Registrar Nuevo Cliente</h3>
+                <h3>{isEn ? "Register New Customer" : "Registrar Nuevo Cliente"}</h3>
               </div>
               <button
                 type="button"
@@ -1117,22 +1120,22 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
                 <div className="form-grid">
                   <div className="form-grid-2">
                     <div className="form-group">
-                      <label className="form-label">Nombre Completo</label>
+                      <label className="form-label">{isEn ? "Full Name" : "Nombre Completo"}</label>
                       <input
                         type="text"
                         className="input-field"
-                        placeholder="Ej. María Rojas"
+                        placeholder={isEn ? "e.g. Maria Rojas" : "Ej. María Rojas"}
                         value={clientNombre}
                         onChange={(e) => setClientNombre(e.target.value)}
                         required
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Correo Electrónico</label>
+                      <label className="form-label">{isEn ? "Email Address" : "Correo Electrónico"}</label>
                       <input
                         type="email"
                         className="input-field"
-                        placeholder="Ej. maria@correo.com"
+                        placeholder={isEn ? "e.g. maria@email.com" : "Ej. maria@correo.com"}
                         value={clientEmail}
                         onChange={(e) => setClientEmail(e.target.value)}
                       />
@@ -1141,39 +1144,39 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
 
                   <div className="form-grid-2">
                     <div className="form-group">
-                      <label className="form-label">Segmentación</label>
+                      <label className="form-label">{isEn ? "Segmentation" : "Segmentación"}</label>
                       <select
                         className="input-field select-field"
                         value={clientSegmento}
                         onChange={(e) => setClientSegmento(e.target.value)}
                       >
-                        <option value="nuevo">Nuevo</option>
-                        <option value="recurrente">Recurrente</option>
+                        <option value="nuevo">{isEn ? "New" : "Nuevo"}</option>
+                        <option value="recurrente">{isEn ? "Recurring" : "Recurrente"}</option>
                         <option value="VIP">VIP</option>
-                        <option value="corporativo">Corporativo</option>
+                        <option value="corporativo">{isEn ? "Corporate" : "Corporativo"}</option>
                       </select>
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Método de Pago Habitual</label>
+                      <label className="form-label">{isEn ? "Preferred Payment Method" : "Método de Pago Habitual"}</label>
                       <select
                         className="input-field select-field"
                         value={clientMetodoPago}
                         onChange={(e) => setClientMetodoPago(e.target.value)}
                       >
-                        <option value="efectivo">Efectivo</option>
-                        <option value="tarjeta">Tarjeta de Crédito/Débito</option>
-                        <option value="transferencia">Transferencia Bancaria</option>
+                        <option value="efectivo">{isEn ? "Cash" : "Efectivo"}</option>
+                        <option value="tarjeta">{isEn ? "Credit/Debit Card" : "Tarjeta de Crédito/Débito"}</option>
+                        <option value="transferencia">{isEn ? "Bank Transfer" : "Transferencia Bancaria"}</option>
                         <option value="yape/plin">Yape / Plin</option>
                       </select>
                     </div>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Preferencias / Notas Especiales</label>
+                    <label className="form-label">{isEn ? "Preferences / Special Notes" : "Preferencias / Notas Especiales"}</label>
                     <textarea
                       className="input-field textarea-field"
                       rows={3}
-                      placeholder="Ej. Alérgica a los mariscos, prefiere mesa en la terraza..."
+                      placeholder={isEn ? "e.g. Seafood allergy, prefers terrace table..." : "Ej. Alérgica a los mariscos, prefiere mesa en la terraza..."}
                       value={clientPreferencias}
                       onChange={(e) => setClientPreferencias(e.target.value)}
                     />
@@ -1187,10 +1190,10 @@ export const Ventas: React.FC<VentasProps> = ({ usuario }) => {
                   className="btn btn-secondary"
                   onClick={() => setShowClientModal(false)}
                 >
-                  Cancelar
+                  {isEn ? "Cancel" : "Cancelar"}
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Guardar Cliente
+                  {isEn ? "Save Customer" : "Guardar Cliente"}
                 </button>
               </div>
             </form>

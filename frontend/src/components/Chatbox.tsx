@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, X, Bot } from "lucide-react";
+import { Send, X, Bot, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { api } from "../api";
 import type { Usuario } from "../api";
+import { useTranslation } from "../LanguageContext";
 
 interface Message {
   id: string;
@@ -16,18 +17,138 @@ interface ChatboxProps {
 
 export const Chatbox: React.FC<ChatboxProps> = ({ usuario }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      sender: "assistant",
-      text: `¡Hola ${usuario.nombre}! Soy PatosAI 🦆. ¿En qué puedo ayudarte hoy?`,
-      timestamp: new Date(),
-    },
-  ]);
+  const { language } = useTranslation();
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
+  // Voice Chat States & Refs
+  const [isListening, setIsListening] = useState(false);
+  const [currentlySpeakingId, setCurrentlySpeakingId] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  const SpeechRecognition = typeof window !== "undefined" && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+  const hasSpeechRecognition = !!SpeechRecognition;
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Cleanup active audio/speech processes on unmount/close
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const stopAudioAndRecognition = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.abort();
+      setIsListening(false);
+    }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setCurrentlySpeakingId(null);
+    }
+  };
+
+  const toggleListening = () => {
+    if (!hasSpeechRecognition) return;
+
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+    } else {
+      // Stop any active speech readback first
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        setCurrentlySpeakingId(null);
+      }
+
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = language === "en" ? "en-US" : "es-ES";
+
+        recognition.onstart = () => {
+          setIsListening(true);
+        };
+
+        recognition.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          if (transcript) {
+            setInputText((prev) => {
+              const base = prev.trim();
+              return base ? `${prev} ${transcript}` : transcript;
+            });
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.error("Speech recognition error:", event.error);
+          setIsListening(false);
+        };
+
+        recognition.onend = () => {
+          setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+      } catch (err) {
+        console.error("Failed to start speech recognition:", err);
+        setIsListening(false);
+      }
+    }
+  };
+
+  const toggleSpeak = (messageId: string, text: string) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    if (currentlySpeakingId === messageId) {
+      window.speechSynthesis.cancel();
+      setCurrentlySpeakingId(null);
+    } else {
+      window.speechSynthesis.cancel(); // Stop other speaking items
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = language === "en" ? "en-US" : "es-ES";
+
+      utterance.onstart = () => {
+        setCurrentlySpeakingId(messageId);
+      };
+
+      utterance.onend = () => {
+        setCurrentlySpeakingId(null);
+      };
+
+      utterance.onerror = () => {
+        setCurrentlySpeakingId(null);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  // Initialize and update welcome message when language or user changes
+  useEffect(() => {
+    setMessages([
+      {
+        id: "welcome",
+        sender: "assistant",
+        text: language === "en"
+          ? `Hello ${usuario.nombre}! I am PatosAI 🦆. How can I help you today?`
+          : `¡Hola ${usuario.nombre}! Soy PatosAI 🦆. ¿En qué puedo ayudarte hoy?`,
+        timestamp: new Date(),
+      },
+    ]);
+  }, [language, usuario.nombre]);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -38,6 +159,9 @@ export const Chatbox: React.FC<ChatboxProps> = ({ usuario }) => {
 
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
+
+    // Stop listening/speaking when sending a message
+    stopAudioAndRecognition();
 
     // Add user message
     const userMessage: Message = {
@@ -66,7 +190,9 @@ export const Chatbox: React.FC<ChatboxProps> = ({ usuario }) => {
         const errorMessage: Message = {
           id: Math.random().toString(),
           sender: "assistant",
-          text: "Lo siento, tuve un pequeño problema de conexión al procesar tu solicitud. 🦆",
+          text: language === "en"
+            ? "Sorry, I had a connection problem processing your request. 🦆"
+            : "Lo siento, tuve un pequeño problema de conexión al procesar tu solicitud. 🦆",
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, errorMessage]);
@@ -77,10 +203,17 @@ export const Chatbox: React.FC<ChatboxProps> = ({ usuario }) => {
   };
 
   const generateAIResponse = async (userText: string): Promise<string> => {
+    const isEn = language === "en";
     const query = userText.toLowerCase().trim();
     
-    if (query.includes("chiste") || query.includes("gracioso") || query.includes("pato")) {
-      const jokes = [
+    if (query.includes("chiste") || query.includes("gracioso") || query.includes("pato") || query.includes("joke") || query.includes("funny") || query.includes("duck")) {
+      const jokes = isEn ? [
+        "What does a duck do when it has a headache? Duck-cetamol! 🦆",
+        "What is a duck's favorite dish? Noodles with duck! (A bit dark, better not tell anyone) 🍽️",
+        "Why don't ducks have money? Because they pay for everything with their bill! 🪙",
+        "What does one duck say to another? We are tied! 🤝",
+        "How does a duck curse? Quack-ever be thy will! 🧙‍♂️"
+      ] : [
         "¿Qué hace un pato con dolor de cabeza? ¡Pato-cetamol! 🦆",
         "¿Cuál es el plato favorito de un pato? ¡Los tallarines con pato! (Un poco turbio, mejor no se lo digas a nadie) 🍽️",
         "¿Por qué los patos no tienen dinero? ¡Porque todo lo pagan con el pico! 🪙",
@@ -90,46 +223,64 @@ export const Chatbox: React.FC<ChatboxProps> = ({ usuario }) => {
       return jokes[Math.floor(Math.random() * jokes.length)];
     }
     
-    if (query.includes("mesa") || query.includes("ocupada") || query.includes("capacidad") || query.includes("disponib")) {
+    if (query.includes("mesa") || query.includes("ocupada") || query.includes("capacidad") || query.includes("disponib") || query.includes("table") || query.includes("busy") || query.includes("avail")) {
       try {
         const mesas = await api.mesas.getAll();
-        const ocupadas = mesas.filter(m => m.estadoActual.toLowerCase() === "ocupado" || m.estadoActual.toLowerCase() === "ocupada").length;
-        return `Actualmente hay ${mesas.length} mesas registradas en el sistema. ${ocupadas} están ocupadas y ${mesas.length - ocupadas} están disponibles. 🪑`;
+        const ocupadas = mesas.filter(m => m.estadoActual.toLowerCase() === "ocupado" || m.estadoActual.toLowerCase() === "ocupada" || m.estadoActual.toLowerCase() === "busy").length;
+        return isEn 
+          ? `Currently, there are ${mesas.length} tables registered in the system. ${ocupadas} are occupied and ${mesas.length - ocupadas} are available. 🪑`
+          : `Actualmente hay ${mesas.length} mesas registradas en el sistema. ${ocupadas} están ocupadas y ${mesas.length - ocupadas} están disponibles. 🪑`;
       } catch (e) {
-        return "No pude consultar el estado de las mesas en este momento. Inténtalo de nuevo. 🪑";
+        return isEn
+          ? "I couldn't check the status of the tables right now. Try again. 🪑"
+          : "No pude consultar el estado de las mesas en este momento. Inténtalo de nuevo. 🪑";
       }
     }
 
-    if (query.includes("plato") || query.includes("producto") || query.includes("mas vendido") || query.includes("más vendido") || query.includes("bebida") || query.includes("carta")) {
+    if (query.includes("plato") || query.includes("producto") || query.includes("mas vendido") || query.includes("más vendido") || query.includes("bebida") || query.includes("carta") || query.includes("dish") || query.includes("product") || query.includes("menu")) {
       try {
         const productos = await api.productos.getAll();
-        return `El catálogo cuenta con ${productos.length} productos registrados. Los platos favoritos de los clientes son el Cabrito guisado y la Pava al horno. 🍲`;
+        return isEn 
+          ? `The catalog has ${productos.length} registered products. The customers' favorite dishes are Cabrito guisado and Pava al horno. 🍲`
+          : `El catálogo cuenta con ${productos.length} productos registrados. Los platos favoritos de los clientes son el Cabrito guisado y la Pava al horno. 🍲`;
       } catch (e) {
-        return "No pude obtener información del catálogo en este momento. 🍲";
+        return isEn
+          ? "I couldn't get catalog information right now. 🍲"
+          : "No pude obtener información del catálogo en este momento. 🍲";
       }
     }
 
-    if (query.includes("cliente") || query.includes("registrar")) {
-      return "Para registrar un cliente, dirígete a la pestaña 'Gestión Clientes' en el menú de la izquierda, haz clic en 'Nuevo Cliente', ingresa sus datos y guarda. ¡Es muy fácil! 👥";
+    if (query.includes("cliente") || query.includes("registrar") || query.includes("customer") || query.includes("register")) {
+      return isEn 
+        ? "To register a customer, go to the 'Manage Customers' tab on the left menu, click 'New Customer', enter their details and save. It's that easy! 👥"
+        : "Para registrar un cliente, dirígete a la pestaña 'Gestión Clientes' en el menú de la izquierda, haz clic en 'Nuevo Cliente', ingresa sus datos y guarda. ¡Es muy fácil! 👥";
     }
 
-    if (query.includes("cocina") || query.includes("pedido") || query.includes("pendiente")) {
+    if (query.includes("cocina") || query.includes("pedido") || query.includes("pendiente") || query.includes("kitchen") || query.includes("order") || query.includes("pending")) {
       try {
         const historial = await api.ventas.getHistorial();
-        const pendientes = historial.filter(h => h.estado_cocina.toLowerCase() === "pendiente").length;
-        const preparando = historial.filter(h => h.estado_cocina.toLowerCase() === "preparando" || h.estado_cocina.toLowerCase() === "en_preparacion").length;
+        const pendientes = historial.filter(h => h.estado_cocina.toLowerCase() === "pendiente" || h.estado_cocina.toLowerCase() === "pending").length;
+        const preparando = historial.filter(h => h.estado_cocina.toLowerCase() === "preparando" || h.estado_cocina.toLowerCase() === "en_preparacion" || h.estado_cocina.toLowerCase() === "preparing").length;
         
-        return `En este momento tenemos ${pendientes} pedidos pendientes en cocina y ${preparando} en preparación. ¡El equipo está trabajando a toda marcha! 🍳`;
+        return isEn 
+          ? `Right now we have ${pendientes} pending orders in the kitchen and ${preparando} in preparation. The team is working at full speed! 🍳`
+          : `En este momento tenemos ${pendientes} pedidos pendientes en cocina y ${preparando} en preparación. ¡El equipo está trabajando a toda marcha! 🍳`;
       } catch (e) {
-        return "No pude consultar el estado de la cocina en este momento. 🍳";
+        return isEn
+          ? "I couldn't check the kitchen status at this moment. 🍳"
+          : "No pude consultar el estado de la cocina en este momento. 🍳";
       }
     }
 
-    if (query.includes("hola") || query.includes("buenas") || query.includes("saludo") || query.includes("hey")) {
-      return `¡Hola, ${usuario.nombre}! Soy PatosAI 🦆, tu asistente virtual del Restaurant Los Patos. ¿En qué te puedo ayudar hoy? Prueba preguntándome sobre las mesas, el estado de la cocina o pídeme un chiste.`;
+    if (query.includes("hola") || query.includes("buenas") || query.includes("saludo") || query.includes("hey") || query.includes("hello") || query.includes("hi")) {
+      return isEn 
+        ? `Hello, ${usuario.nombre}! I am PatosAI 🦆, your virtual assistant for Los Patos Restaurant. How can I help you today? Try asking me about tables, kitchen status, or ask me for a joke.`
+        : `¡Hola, ${usuario.nombre}! Soy PatosAI 🦆, tu asistente virtual del Restaurant Los Patos. ¿En qué te puedo ayudar hoy? Prueba preguntándome sobre las mesas, el estado de la cocina o pídeme un chiste.`;
     }
 
-    return "Entiendo tu consulta. Soy PatosAI, tu asistente virtual. Puedo darte reportes en tiempo real sobre las mesas ocupadas, platos del catálogo, pedidos en cocina o contarte algún chiste. ¿De qué te gustaría hablar? 🦆";
+    return isEn 
+      ? "I understand your query. I am PatosAI, your virtual assistant. I can give you real-time reports about busy tables, dishes in the catalog, orders in the kitchen, or tell you a joke. What would you like to talk about? 🦆"
+      : "Entiendo tu consulta. Soy PatosAI, tu asistente virtual. Puedo darte reportes en tiempo real sobre las mesas ocupadas, platos del catálogo, pedidos en cocina o contarte algún chiste. ¿De qué te gustaría hablar? 🦆";
   };
 
   const QuickQuestionButton: React.FC<{ text: string }> = ({ text }) => (
@@ -148,7 +299,7 @@ export const Chatbox: React.FC<ChatboxProps> = ({ usuario }) => {
         <button
           className="chatbox-toggle-btn"
           onClick={() => setIsOpen(true)}
-          title="Abrir PatosAI"
+          title={language === "en" ? "Open PatosAI" : "Abrir PatosAI"}
         >
           <Bot size={28} className="bot-icon-animate" />
           <span className="pulse-dot"></span>
@@ -168,14 +319,17 @@ export const Chatbox: React.FC<ChatboxProps> = ({ usuario }) => {
                 <h4>PatosAI 🦆</h4>
                 <div className="status-container">
                   <span className="status-dot"></span>
-                  <span>Asistente en línea</span>
+                  <span>{language === "en" ? "Assistant online" : "Asistente en línea"}</span>
                 </div>
               </div>
             </div>
             <button
               className="chatbox-close-btn"
-              onClick={() => setIsOpen(false)}
-              title="Cerrar chat"
+              onClick={() => {
+                stopAudioAndRecognition();
+                setIsOpen(false);
+              }}
+              title={language === "en" ? "Close chat" : "Cerrar chat"}
             >
               <X size={20} />
             </button>
@@ -193,12 +347,24 @@ export const Chatbox: React.FC<ChatboxProps> = ({ usuario }) => {
                 >
                   <div className="message-bubble">
                     <p>{msg.text}</p>
-                    <span className="message-time">
-                      {msg.timestamp.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
+                    <div className="message-footer" style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                      {msg.sender === "assistant" && (
+                        <button
+                          type="button"
+                          onClick={() => toggleSpeak(msg.id, msg.text)}
+                          className={`msg-speak-btn ${currentlySpeakingId === msg.id ? "speaking" : ""}`}
+                          title={currentlySpeakingId === msg.id ? (language === "en" ? "Stop reading" : "Detener lectura") : (language === "en" ? "Read aloud" : "Escuchar")}
+                        >
+                          {currentlySpeakingId === msg.id ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                        </button>
+                      )}
+                      <span className="message-time" style={{ marginLeft: msg.sender === "assistant" ? "0" : "auto" }}>
+                        {msg.timestamp.toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -218,12 +384,12 @@ export const Chatbox: React.FC<ChatboxProps> = ({ usuario }) => {
             {/* Suggestions */}
             {messages.length === 1 && (
               <div className="quick-questions-container">
-                <p className="suggestions-title">Preguntas sugeridas:</p>
+                <p className="suggestions-title">{language === "en" ? "Suggested questions:" : "Preguntas sugeridas:"}</p>
                 <div className="suggestions-grid">
-                  <QuickQuestionButton text="¿Mesas ocupadas hoy? 🪑" />
-                  <QuickQuestionButton text="¿Cómo está la cocina? 🍳" />
-                  <QuickQuestionButton text="¿Platos más vendidos? 🍲" />
-                  <QuickQuestionButton text="Chiste de patos 🦆" />
+                  <QuickQuestionButton text={language === "en" ? "Occupied tables today? 🪑" : "¿Mesas ocupadas hoy? 🪑"} />
+                  <QuickQuestionButton text={language === "en" ? "How is the kitchen? 🍳" : "¿Cómo está la cocina? 🍳"} />
+                  <QuickQuestionButton text={language === "en" ? "Best selling dishes? 🍲" : "¿Platos más vendidos? 🍲"} />
+                  <QuickQuestionButton text={language === "en" ? "Duck joke 🦆" : "Chiste de patos 🦆"} />
                 </div>
               </div>
             )}
@@ -237,9 +403,19 @@ export const Chatbox: React.FC<ChatboxProps> = ({ usuario }) => {
               handleSend(inputText);
             }}
           >
+            {hasSpeechRecognition && (
+              <button
+                type="button"
+                onClick={toggleListening}
+                className={`chatbox-voice-btn ${isListening ? "listening" : ""}`}
+                title={isListening ? (language === "en" ? "Stop listening" : "Detener grabación") : (language === "en" ? "Voice input" : "Chat por voz")}
+              >
+                {isListening ? <MicOff size={18} className="listening-pulse" /> : <Mic size={18} />}
+              </button>
+            )}
             <input
               type="text"
-              placeholder="Escribe tu mensaje aquí..."
+              placeholder={language === "en" ? "Type your message here..." : "Escribe tu mensaje aquí..."}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className="chatbox-input"
@@ -248,7 +424,7 @@ export const Chatbox: React.FC<ChatboxProps> = ({ usuario }) => {
               type="submit"
               className="chatbox-send-btn"
               disabled={!inputText.trim()}
-              title="Enviar"
+              title={language === "en" ? "Send" : "Enviar"}
             >
               <Send size={18} />
             </button>
@@ -589,6 +765,77 @@ export const Chatbox: React.FC<ChatboxProps> = ({ usuario }) => {
           background: #e2e8f0;
           color: #94a3b8;
           cursor: not-allowed;
+        }
+
+        .chatbox-voice-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+          color: #64748b;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+        }
+
+        .chatbox-voice-btn:hover {
+          background: #e2e8f0;
+          color: #334155;
+        }
+
+        .chatbox-voice-btn.listening {
+          background: #fee2e2;
+          border-color: #fca5a5;
+          color: #ef4444;
+          animation: listeningPulseBg 1.5s infinite ease-in-out;
+        }
+
+        .listening-pulse {
+          animation: listeningPulse 1.5s infinite ease-in-out;
+        }
+
+        @keyframes listeningPulseBg {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+          50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+        }
+
+        @keyframes listeningPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.15); }
+        }
+
+        .msg-speak-btn {
+          background: transparent;
+          border: none;
+          color: #94a3b8;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 4px;
+          border-radius: 4px;
+          transition: all 0.2s ease;
+        }
+
+        .msg-speak-btn:hover {
+          color: var(--accent-primary, #3b82f6);
+          background: #f1f5f9;
+        }
+
+        .msg-speak-btn.speaking {
+          color: #10b981;
+          background: #ecfdf5;
+          animation: speakingWiggle 1s infinite ease-in-out;
+        }
+
+        @keyframes speakingWiggle {
+          0%, 100% { transform: rotate(0); }
+          25% { transform: rotate(-8deg); }
+          75% { transform: rotate(8deg); }
         }
 
         @media (max-width: 480px) {

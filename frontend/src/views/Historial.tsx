@@ -2,12 +2,15 @@ import React, { useState, useEffect } from "react";
 import { api, API_BASE } from "../api";
 import type { VentaEncabezado } from "../api";
 import { History, FileText, Receipt, Trash2, ChevronDown, ChevronUp, Download } from "lucide-react";
+import { useTranslation } from "../LanguageContext";
 
 export const Historial: React.FC = () => {
   const [ventas, setVentas] = useState<VentaEncabezado[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [expandedVentaId, setExpandedVentaId] = useState<number | null>(null);
+  const { language } = useTranslation();
+  const isEn = language === "en";
 
   const loadHistorial = async () => {
     setLoading(true);
@@ -17,7 +20,7 @@ export const Historial: React.FC = () => {
       data.sort((a, b) => b.ventaId - a.ventaId);
       setVentas(data);
     } catch (err: any) {
-      setError("Error al cargar el historial de ventas");
+      setError(isEn ? "Error loading sales history" : "Error al cargar el historial de ventas");
     } finally {
       setLoading(false);
     }
@@ -32,12 +35,12 @@ export const Historial: React.FC = () => {
   };
 
   const handleDeleteVenta = async (id: number) => {
-    if (!window.confirm(`¿Está seguro de eliminar de forma permanente la venta #${id}?`)) return;
+    if (!window.confirm(isEn ? `Are you sure you want to permanently delete sale #${id}?` : `¿Está seguro de eliminar de forma permanente la venta #${id}?`)) return;
     try {
       await api.ventas.delete(id);
       loadHistorial();
     } catch (err: any) {
-      alert("No se pudo eliminar la venta");
+      alert(isEn ? "Could not delete sale" : "No se pudo eliminar la venta");
     }
   };
 
@@ -54,20 +57,22 @@ export const Historial: React.FC = () => {
   const handleDownloadCsv = () => {
     // Generate CSV content
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Venta ID,Fecha,Cliente,Mesero,Mesa,Subtotal,Impuestos,Propina,Descuento,Total Final,Método de Pago\n";
+    csvContent += isEn
+      ? "Sale ID,Date,Customer,Waiter,Table,Subtotal,Taxes,Tip,Discount,Final Total,Payment Method\n"
+      : "Venta ID,Fecha,Cliente,Mesero,Mesa,Subtotal,Impuestos,Propina,Descuento,Total Final,Método de Pago\n";
 
     ventas.forEach((v) => {
-      const cName = v.cliente ? v.cliente.nombre : "Consumidor Final";
+      const cName = v.cliente ? v.cliente.nombre : (isEn ? "Final Consumer" : "Consumidor Final");
       const eName = v.empleado ? v.empleado.nombre : "N/A";
-      const mNum = v.mesa ? `Mesa ${v.mesa.numeroMesa}` : "Para Llevar";
-      const payMethod = v.metodoPago || "No especificado";
+      const mNum = v.mesa ? (isEn ? `Table ${v.mesa.numeroMesa}` : `Mesa ${v.mesa.numeroMesa}`) : (isEn ? "To Go" : "Para Llevar");
+      const payMethod = v.metodoPago ? (isEn && v.metodoPago === "efectivo" ? "cash" : isEn && v.metodoPago === "tarjeta" ? "card" : v.metodoPago) : (isEn ? "Unspecified" : "No especificado");
       csvContent += `${v.ventaId},${formatDate(v.fechaHora)},"${cName}","${eName}","${mNum}",${v.subtotal},${v.impuestos},${v.propina},${v.descuentoAplicado},${v.totalFinal},"${payMethod}"\n`;
     });
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "historial_ventas.csv");
+    link.setAttribute("download", isEn ? "sales_history.csv" : "historial_ventas.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -77,12 +82,14 @@ export const Historial: React.FC = () => {
     <div className="animate-fade-in view-layout">
       <div className="view-header">
         <div>
-          <h1 className="page-title">Historial de Ventas</h1>
-          <p className="page-subtitle">Consulte y descargue comprobantes de pago de transacciones anteriores</p>
+          <h1 className="page-title">{isEn ? "Sales History" : "Historial de Ventas"}</h1>
+          <p className="page-subtitle">
+            {isEn ? "View and download payment receipts from previous transactions" : "Consulte y descargue comprobantes de pago de transacciones anteriores"}
+          </p>
         </div>
         <button className="btn btn-secondary" onClick={handleDownloadCsv} disabled={ventas.length === 0}>
           <Download size={16} />
-          Exportar CSV
+          {isEn ? "Export CSV" : "Exportar CSV"}
         </button>
       </div>
 
@@ -92,13 +99,13 @@ export const Historial: React.FC = () => {
         {loading ? (
           <div className="loading-container">
             <div className="spinner"></div>
-            <span>Buscando historial de transacciones...</span>
+            <span>{isEn ? "Searching transaction history..." : "Buscando historial de transacciones..."}</span>
           </div>
         ) : ventas.length === 0 ? (
           <div className="empty-container">
             <History size={48} className="empty-icon" />
-            <h3>No se encontraron registros de ventas</h3>
-            <p>Las ventas que realice en la sección POS aparecerán registradas aquí.</p>
+            <h3>{isEn ? "No sales records found" : "No se encontraron registros de ventas"}</h3>
+            <p>{isEn ? "Sales you make in the POS section will appear registered here." : "Las ventas que realice en la sección POS aparecerán registradas aquí."}</p>
           </div>
         ) : (
           <div className="table-container">
@@ -106,21 +113,21 @@ export const Historial: React.FC = () => {
               <thead>
                 <tr>
                   <th style={{ width: "40px" }}></th>
-                  <th>ID Venta</th>
-                  <th>Fecha</th>
-                  <th>Cliente</th>
-                  <th>Mesa</th>
-                  <th>Mesero</th>
-                  <th>Total Final</th>
-                  <th style={{ textAlign: "center" }}>Comprobantes</th>
-                  <th style={{ textAlign: "center" }}>Acciones</th>
+                  <th>{isEn ? "Sale ID" : "ID Venta"}</th>
+                  <th>{isEn ? "Date" : "Fecha"}</th>
+                  <th>{isEn ? "Customer" : "Cliente"}</th>
+                  <th>{isEn ? "Table" : "Mesa"}</th>
+                  <th>{isEn ? "Waiter" : "Mesero"}</th>
+                  <th>{isEn ? "Final Total" : "Total Final"}</th>
+                  <th style={{ textAlign: "center" }}>{isEn ? "Receipts" : "Comprobantes"}</th>
+                  <th style={{ textAlign: "center" }}>{isEn ? "Actions" : "Acciones"}</th>
                 </tr>
               </thead>
               <tbody>
                 {ventas.map((v) => {
                   const isExpanded = expandedVentaId === v.ventaId;
-                  const clienteNombre = v.cliente ? v.cliente.nombre : "Consumidor Final";
-                  const mesaStr = v.mesa ? `Mesa ${v.mesa.numeroMesa}` : "Para Llevar";
+                  const clienteNombre = v.cliente ? v.cliente.nombre : (isEn ? "Final Consumer" : "Consumidor Final");
+                  const mesaStr = v.mesa ? (isEn ? `Table ${v.mesa.numeroMesa}` : `Mesa ${v.mesa.numeroMesa}`) : (isEn ? "To Go" : "Para Llevar");
                   const meseroStr = v.empleado ? v.empleado.nombre : "N/A";
 
                   return (
@@ -142,10 +149,10 @@ export const Historial: React.FC = () => {
                             <button
                               className="btn btn-secondary btn-compact"
                               onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownloadPdf(v.ventaId, "ticket");
-                              }}
-                              title="Ver Ticket de Venta"
+                                  e.stopPropagation();
+                                  handleDownloadPdf(v.ventaId, "ticket");
+                                }}
+                              title={isEn ? "View Sale Ticket" : "Ver Ticket de Venta"}
                             >
                               <Receipt size={13} />
                               Ticket
@@ -153,13 +160,13 @@ export const Historial: React.FC = () => {
                             <button
                               className="btn btn-secondary btn-compact"
                               onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownloadPdf(v.ventaId, "factura");
-                              }}
-                              title="Ver Factura Electrónica"
+                                  e.stopPropagation();
+                                  handleDownloadPdf(v.ventaId, "factura");
+                                }}
+                              title={isEn ? "View Electronic Invoice" : "Ver Factura Electrónica"}
                             >
                               <FileText size={13} />
-                              Factura
+                              {isEn ? "Invoice" : "Factura"}
                             </button>
                           </div>
                         </td>
@@ -167,7 +174,7 @@ export const Historial: React.FC = () => {
                           <button
                             className="btn-icon btn-icon-danger"
                             onClick={() => handleDeleteVenta(v.ventaId)}
-                            title="Eliminar venta permanentemente"
+                            title={isEn ? "Delete sale permanently" : "Eliminar venta permanentemente"}
                           >
                             <Trash2 size={15} />
                           </button>
@@ -178,22 +185,22 @@ export const Historial: React.FC = () => {
                         <tr className="details-row">
                           <td colSpan={9}>
                             <div className="details-expanded glass-card animate-fade-in">
-                              <h4 className="details-title">Productos del Pedido</h4>
+                              <h4 className="details-title">{isEn ? "Order Products" : "Productos del Pedido"}</h4>
                               <table className="details-table">
                                 <thead>
                                   <tr>
-                                    <th>Producto</th>
-                                    <th>Cantidad</th>
-                                    <th>P. Unitario</th>
+                                    <th>{isEn ? "Product" : "Producto"}</th>
+                                    <th>{isEn ? "Quantity" : "Cantidad"}</th>
+                                    <th>{isEn ? "Unit Price" : "P. Unitario"}</th>
                                     <th>Subtotal</th>
-                                    <th>Estado Cocina</th>
+                                    <th>{isEn ? "Kitchen Status" : "Estado Cocina"}</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {v.detalles && v.detalles.length > 0 ? (
                                     v.detalles.map((det) => (
                                       <tr key={det.detalleId}>
-                                        <td>{det.producto ? det.producto.nombre : "Producto Eliminado"}</td>
+                                        <td>{det.producto ? det.producto.nombre : (isEn ? "Deleted Product" : "Producto Eliminado")}</td>
                                         <td>{det.cantidad}</td>
                                         <td>${det.precioUnitarioMomento.toFixed(2)}</td>
                                         <td>${(det.precioUnitarioMomento * det.cantidad).toFixed(2)}</td>
@@ -201,7 +208,9 @@ export const Historial: React.FC = () => {
                                           <span className={`badge ${det.estadoCocina === "listo" ? "badge-success" :
                                               det.estadoCocina === "preparacion" ? "badge-warning" : "badge-danger"
                                             }`}>
-                                            {det.estadoCocina}
+                                            {isEn && det.estadoCocina === "pendiente" ? "pending" : 
+                                             isEn && det.estadoCocina === "preparacion" ? "preparing" : 
+                                             isEn && det.estadoCocina === "listo" ? "ready" : det.estadoCocina}
                                           </span>
                                         </td>
                                       </tr>
@@ -209,7 +218,7 @@ export const Historial: React.FC = () => {
                                   ) : (
                                     <tr>
                                       <td colSpan={5} className="text-center text-muted">
-                                        No hay información detallada disponible para esta venta.
+                                        {isEn ? "No detailed information available for this sale." : "No hay información detallada disponible para esta venta."}
                                       </td>
                                     </tr>
                                   )}
@@ -222,24 +231,24 @@ export const Historial: React.FC = () => {
                                    <span className="summary-value">${v.subtotal.toFixed(2)}</span>
                                  </div>
                                  <div>
-                                   <span className="summary-label">Impuestos:</span>
+                                   <span className="summary-label">{isEn ? "Taxes:" : "Impuestos:"}</span>
                                    <span className="summary-value">${v.impuestos.toFixed(2)}</span>
                                  </div>
                                  <div>
-                                   <span className="summary-label">Método de Pago:</span>
+                                   <span className="summary-label">{isEn ? "Payment Method:" : "Método de Pago:"}</span>
                                    <span className="summary-value" style={{ textTransform: "capitalize", color: v.metodoPago === "efectivo" ? "var(--accent-success)" : "var(--accent-primary)" }}>
-                                     {v.metodoPago || "No especificado"}
+                                     {v.metodoPago ? (isEn && v.metodoPago === "efectivo" ? "cash" : isEn && v.metodoPago === "tarjeta" ? "card" : v.metodoPago) : (isEn ? "Unspecified" : "No especificado")}
                                    </span>
                                  </div>
                                 {v.descuentoAplicado > 0 && (
                                   <div>
-                                    <span className="summary-label text-danger">Descuento:</span>
+                                    <span className="summary-label text-danger">{isEn ? "Discount:" : "Descuento:"}</span>
                                     <span className="summary-value text-danger">-${v.descuentoAplicado.toFixed(2)}</span>
                                   </div>
                                 )}
                                 {v.propina > 0 && (
                                   <div>
-                                    <span className="summary-label text-success">Propina:</span>
+                                    <span className="summary-label text-success">{isEn ? "Tip:" : "Propina:"}</span>
                                     <span className="summary-value text-success">+${v.propina.toFixed(2)}</span>
                                   </div>
                                 )}

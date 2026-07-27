@@ -15,13 +15,17 @@ import { Historial } from "./views/Historial";
 import { Predicts } from "./views/Predicts";
 import { Dashboard } from "./views/Dashboard";
 import { Menu } from "lucide-react";
+import { LanguageProvider, useTranslation } from "./LanguageContext";
 
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [authView, setAuthView] = useState<"login" | "register">("login");
   const [vistaActual, setVistaActual] = useState<string>("dashboard");
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(window.innerWidth <= 900);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  
+  const { t } = useTranslation();
 
   // Load user from localStorage if it exists
   useEffect(() => {
@@ -35,6 +39,25 @@ export const App: React.FC = () => {
       }
     }
   }, []);
+
+  // Load and apply theme from localStorage or system preference
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.classList.toggle("dark", savedTheme === "dark");
+    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      setTheme("dark");
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+  };
 
   const handleLoginSuccess = (user: Usuario) => {
     setUsuario(user);
@@ -108,7 +131,7 @@ export const App: React.FC = () => {
         <button 
           className="mobile-menu-toggle" 
           onClick={() => setSidebarCollapsed(false)}
-          title="Abrir menú"
+          title={t("Abrir menú")}
         >
           <Menu size={24} />
         </button>
@@ -132,12 +155,22 @@ export const App: React.FC = () => {
         onLogout={handleLogout}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
       <main className="main-content">
         {renderView()}
       </main>
       <Chatbox usuario={usuario} />
     </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 };
 

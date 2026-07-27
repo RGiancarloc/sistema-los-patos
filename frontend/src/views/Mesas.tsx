@@ -2,11 +2,14 @@ import React, { useState, useEffect } from "react";
 import { api } from "../api";
 import type { Mesa } from "../api";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { useTranslation } from "../LanguageContext";
 
 export const Mesas: React.FC = () => {
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { language } = useTranslation();
+  const isEn = language === "en";
 
   // Form states
   const [numeroMesa, setNumeroMesa] = useState("");
@@ -22,7 +25,7 @@ export const Mesas: React.FC = () => {
       const data = await api.mesas.getAll();
       setMesas(data);
     } catch (err: any) {
-      setError("Error al cargar las mesas");
+      setError(isEn ? "Error loading tables" : "Error al cargar las mesas");
     } finally {
       setLoading(false);
     }
@@ -35,7 +38,7 @@ export const Mesas: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!numeroMesa || !capacidad) {
-      setError("Número de Mesa y Capacidad son obligatorios");
+      setError(isEn ? "Table number and capacity are required" : "Número de Mesa y Capacidad son obligatorios");
       return;
     }
 
@@ -63,7 +66,7 @@ export const Mesas: React.FC = () => {
       setError("");
       loadMesas();
     } catch (err: any) {
-      setError(err.message || "Error al registrar la mesa");
+      setError(err.message || (isEn ? "Error saving table" : "Error al registrar la mesa"));
     }
   };
 
@@ -87,23 +90,25 @@ export const Mesas: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("¿Está seguro de eliminar esta mesa?")) return;
+    if (!window.confirm(isEn ? "Are you sure you want to delete this table?" : "¿Está seguro de eliminar esta mesa?")) return;
     try {
       await api.mesas.delete(id);
       loadMesas();
     } catch (err: any) {
-      alert(err.message || "No se pudo eliminar la mesa");
+      alert(err.message || (isEn ? "Could not delete table" : "No se pudo eliminar la mesa"));
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
       case "disponible":
-        return <span className="badge badge-success">Disponible</span>;
+        return <span className="badge badge-success">{isEn ? "Available" : "Disponible"}</span>;
       case "ocupada":
-        return <span className="badge badge-danger">Ocupada</span>;
+      case "ocupado":
+        return <span className="badge badge-danger">{isEn ? "Occupied" : "Ocupada"}</span>;
       case "reservada":
-        return <span className="badge badge-warning">Reservada</span>;
+      case "reservado":
+        return <span className="badge badge-warning">{isEn ? "Reserved" : "Reservada"}</span>;
       default:
         return <span className="badge badge-primary">{status}</span>;
     }
@@ -113,8 +118,10 @@ export const Mesas: React.FC = () => {
     <div className="animate-fade-in view-layout">
       <div className="view-header">
         <div>
-          <h1 className="page-title">Gestión de Mesas</h1>
-          <p className="page-subtitle">Monitorea el estado de las mesas y registra nuevas ubicaciones</p>
+          <h1 className="page-title">{isEn ? "Table Management" : "Gestión de Mesas"}</h1>
+          <p className="page-subtitle">
+            {isEn ? "Monitor tables status and register new locations" : "Monitorea el estado de las mesas y registra nuevas ubicaciones"}
+          </p>
         </div>
         <button className="btn btn-primary" onClick={() => {
           if (formOpen && editingMesaId !== null) {
@@ -124,7 +131,7 @@ export const Mesas: React.FC = () => {
           }
         }}>
           <Plus size={18} />
-          {formOpen ? "Ocultar Formulario" : "Nueva Mesa"}
+          {formOpen ? (isEn ? "Hide Form" : "Ocultar Formulario") : (isEn ? "New Table" : "Nueva Mesa")}
         </button>
       </div>
 
@@ -133,17 +140,19 @@ export const Mesas: React.FC = () => {
       {formOpen && (
         <form onSubmit={handleSubmit} className="glass-panel form-card animate-fade-in">
           <h2 className="form-title">
-            {editingMesaId !== null ? "📝 Modificar Mesa" : "🪑 Registrar Nueva Mesa"}
+            {editingMesaId !== null 
+              ? (isEn ? "📝 Edit Table" : "📝 Modificar Mesa") 
+              : (isEn ? "🪑 Register New Table" : "🪑 Registrar Nueva Mesa")}
           </h2>
           
           <div className="form-grid-3">
             <div className="form-group">
-              <label className="form-label">Número de Mesa</label>
+              <label className="form-label">{isEn ? "Table Number" : "Número de Mesa"}</label>
               <input
                 type="number"
                 min="1"
                 className="input-field"
-                placeholder="Ej. 5"
+                placeholder={isEn ? "e.g. 5" : "Ej. 5"}
                 value={numeroMesa}
                 onChange={(e) => setNumeroMesa(e.target.value)}
                 required
@@ -151,12 +160,12 @@ export const Mesas: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Capacidad (Personas)</label>
+              <label className="form-label">{isEn ? "Capacity (People)" : "Capacidad (Personas)"}</label>
               <input
                 type="number"
                 min="1"
                 className="input-field"
-                placeholder="Ej. 4"
+                placeholder={isEn ? "e.g. 4" : "Ej. 4"}
                 value={capacidad}
                 onChange={(e) => setCapacidad(e.target.value)}
                 required
@@ -164,31 +173,31 @@ export const Mesas: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Ubicación</label>
+              <label className="form-label">{isEn ? "Location" : "Ubicación"}</label>
               <select
                 className="input-field select-field"
                 value={ubicacion}
                 onChange={(e) => setUbicacion(e.target.value)}
               >
-                <option value="">-- Seleccionar --</option>
-                <option value="Salón Principal">Salón Principal</option>
-                <option value="Terraza">Terraza</option>
-                <option value="Zona VIP">Zona VIP</option>
-                <option value="Segundo Piso">Segundo Piso</option>
+                <option value="">-- {isEn ? "Select" : "Seleccionar"} --</option>
+                <option value="Salón Principal">{isEn ? "Main Dining Room" : "Salón Principal"}</option>
+                <option value="Terraza">{isEn ? "Terrace" : "Terraza"}</option>
+                <option value="Zona VIP">{isEn ? "VIP Area" : "Zona VIP"}</option>
+                <option value="Segundo Piso">{isEn ? "Second Floor" : "Segundo Piso"}</option>
               </select>
             </div>
 
             {editingMesaId !== null && (
               <div className="form-group animate-fade-in">
-                <label className="form-label">Estado Actual</label>
+                <label className="form-label">{isEn ? "Current Status" : "Estado Actual"}</label>
                 <select
                   className="input-field select-field"
                   value={estadoActual}
                   onChange={(e) => setEstadoActual(e.target.value)}
                 >
-                  <option value="disponible">Disponible</option>
-                  <option value="ocupada">Ocupada</option>
-                  <option value="reservada">Reservada</option>
+                  <option value="disponible">{isEn ? "Available" : "Disponible"}</option>
+                  <option value="ocupada">{isEn ? "Occupied" : "Ocupada"}</option>
+                  <option value="reservada">{isEn ? "Reserved" : "Reservada"}</option>
                 </select>
               </div>
             )}
@@ -196,10 +205,10 @@ export const Mesas: React.FC = () => {
 
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={handleCancel}>
-              Cancelar
+              {isEn ? "Cancel" : "Cancelar"}
             </button>
             <button type="submit" className="btn btn-primary">
-              {editingMesaId !== null ? "Guardar Cambios" : "Guardar Mesa"}
+              {editingMesaId !== null ? (isEn ? "Save Changes" : "Guardar Cambios") : (isEn ? "Save Table" : "Guardar Mesa")}
             </button>
           </div>
         </form>
@@ -208,26 +217,26 @@ export const Mesas: React.FC = () => {
       {loading ? (
         <div className="loading-container">
           <div className="spinner"></div>
-          <span>Cargando plano de distribución...</span>
+          <span>{isEn ? "Loading layout..." : "Cargando plano de distribución..."}</span>
         </div>
       ) : mesas.length === 0 ? (
         <div className="empty-container glass-panel">
-          <h3>No hay mesas registradas</h3>
-          <p>Comience a estructurar el plano de su restaurante agregando su primera mesa.</p>
+          <h3>{isEn ? "No tables registered" : "No hay mesas registradas"}</h3>
+          <p>{isEn ? "Start structuring your restaurant layout by adding your first table." : "Comience a estructurar el plano de su restaurante agregando su primera mesa."}</p>
         </div>
       ) : (
         <div className="mesas-grid">
           {mesas.map((mesa) => (
             <div key={mesa.mesaId} className="glass-card mesa-card animate-fade-in">
-              <div className="mesa-number">Mesa {mesa.numeroMesa}</div>
-              <div className="mesa-location">{mesa.ubicacion || "Salón Principal"}</div>
-              <div className="mesa-capacity">Capacidad: {mesa.capacidad} personas</div>
+              <div className="mesa-number">{isEn ? `Table ${mesa.numeroMesa}` : `Mesa ${mesa.numeroMesa}`}</div>
+              <div className="mesa-location">{isEn && mesa.ubicacion === "Salón Principal" ? "Main Dining Room" : (mesa.ubicacion || (isEn ? "Main Dining Room" : "Salón Principal"))}</div>
+              <div className="mesa-capacity">{isEn ? `Capacity: ${mesa.capacidad} people` : `Capacidad: ${mesa.capacidad} personas`}</div>
               <div className="mesa-status">{getStatusBadge(mesa.estadoActual)}</div>
               <div style={{ display: "flex", gap: "8px", width: "100%", marginTop: "12px" }}>
                 <button
                   className="btn btn-secondary"
                   onClick={() => handleStartEdit(mesa)}
-                  title="Modificar mesa"
+                  title={isEn ? "Edit table" : "Modificar mesa"}
                   style={{
                     flex: 1,
                     padding: "8px 12px",
@@ -239,12 +248,12 @@ export const Mesas: React.FC = () => {
                   }}
                 >
                   <Pencil size={13} />
-                  Modificar
+                  {isEn ? "Edit" : "Modificar"}
                 </button>
                 <button
                   className="btn btn-danger"
                   onClick={() => handleDelete(mesa.mesaId)}
-                  title="Eliminar mesa"
+                  title={isEn ? "Delete table" : "Eliminar mesa"}
                   style={{
                     padding: "8px 12px",
                     fontSize: "0.85rem",

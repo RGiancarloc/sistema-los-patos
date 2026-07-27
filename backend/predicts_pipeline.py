@@ -201,7 +201,7 @@ def run_eda(df):
     }
 
 
-def train_models(X, y, df):
+def train_models(X, y, df, lang="es"):
     """
     Fase 2: Entrenamiento y Comparación de Modelos
     """
@@ -280,17 +280,18 @@ def train_models(X, y, df):
         preds_full = model.predict(X)
         predictions_full[name] = np.clip(preds_full, 0, None)
         
-    generate_charts(y, predictions_full, best_model_name)
+    generate_charts(y, predictions_full, best_model_name, lang=lang)
     
     return results, best_model_name, y_test, predictions_test
 
 
-def generate_charts(y_true, predictions, best_name):
+def generate_charts(y_true, predictions, best_name, lang="es"):
     """
     Generates Confusion Matrix Heatmap, ROC curve and error plot.
     """
     plt.close('all')
     sns.set_theme(style="whitegrid")
+    is_en = lang == "en"
     
     # Categorization to perform Classification evaluations
     # Bins for Low, Medium, High demand
@@ -310,8 +311,14 @@ def generate_charts(y_true, predictions, best_name):
     
     # 1. Confusion Matrix Heatmap for all 5 models
     model_names = list(predictions.keys())
-    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
     axes = axes.ravel()
+    
+    bins_labels = ["Low", "Medium", "High"] if is_en else ["Baja", "Media", "Alta"]
+    best_suffix = "* (Best)" if is_en else "* (Mejor)"
+    y_label_cm = "Real Demand" if is_en else "Demanda Real"
+    x_label_cm = "Prediction" if is_en else "Predicción"
+    suptitle_cm = "Confusion Matrices - Comparison of the 5 Models" if is_en else "Matrices de Confusión - Comparativa de los 5 Modelos"
     
     for idx, name in enumerate(model_names):
         preds = predictions[name]
@@ -323,25 +330,25 @@ def generate_charts(y_true, predictions, best_name):
             annot=True, 
             fmt="d", 
             cmap="Blues", 
-            xticklabels=["Baja", "Media", "Alta"], 
-            yticklabels=["Baja", "Media", "Alta"],
+            xticklabels=bins_labels, 
+            yticklabels=bins_labels,
             ax=axes[idx],
             cbar=False
         )
-        axes[idx].set_title(f"{name} {'* (Mejor)' if name == best_name else ''}", fontsize=11, fontweight='bold')
-        axes[idx].set_ylabel("Demanda Real", fontsize=9)
-        axes[idx].set_xlabel("Predicción", fontsize=9)
+        axes[idx].set_title(f"{name} {best_suffix if name == best_name else ''}", fontsize=11, fontweight='bold')
+        axes[idx].set_ylabel(y_label_cm, fontsize=9)
+        axes[idx].set_xlabel(x_label_cm, fontsize=9)
         
     # Hide the 6th subplot (index 5)
     axes[5].axis("off")
     
-    plt.suptitle("Matrices de Confusión - Comparativa de los 5 Modelos", fontsize=16, fontweight='bold')
+    plt.suptitle(suptitle_cm, fontsize=16, fontweight='bold')
     plt.tight_layout()
-    plt.savefig(os.path.join(IMG_DIR, "confusion_matrix.png"), dpi=150)
+    plt.savefig(os.path.join(IMG_DIR, f"confusion_matrix{'_en' if is_en else ''}.png"), dpi=150)
     plt.close()
     
     # 2. Comparative ROC Curves (Macro-average for all 5 models)
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(10, 8))
     
     # One-hot labels
     from sklearn.preprocessing import label_binarize
@@ -395,19 +402,19 @@ def generate_charts(y_true, predictions, best_name):
         # Plot
         color = colors_dict.get(name, "#888888")
         is_best = name == best_name
-        label_text = f"{name} {'* (Mejor)' if is_best else ''} (AUC = {macro_auc:.2f})"
+        label_text = f"{name} {best_suffix if is_best else ''} (AUC = {macro_auc:.2f})"
         plt.plot(all_fpr, mean_tpr, color=color, lw=2.5 if is_best else 1.8, linestyle="--" if is_best else "-",
                  label=label_text)
                  
     plt.plot([0, 1], [0, 1], color='grey', lw=1.5, linestyle=':')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
-    plt.xlabel('Tasa de Falsos Positivos')
-    plt.ylabel('Tasa de Verdaderos Positivos')
-    plt.title('Curvas ROC Comparativas (Promedio Macro)')
+    plt.xlabel('False Positive Rate' if is_en else 'Tasa de Falsos Positivos')
+    plt.ylabel('True Positive Rate' if is_en else 'Tasa de Verdaderos Positivos')
+    plt.title('Comparative ROC Curves (Macro Average)' if is_en else 'Curvas ROC Comparativas (Promedio Macro)')
     plt.legend(loc="lower right")
     plt.tight_layout()
-    plt.savefig(os.path.join(IMG_DIR, "roc_curve.png"), dpi=150)
+    plt.savefig(os.path.join(IMG_DIR, f"roc_curve{'_en' if is_en else ''}.png"), dpi=150)
     plt.close()
 
     # 3. Comparative Metrics Heatmap
@@ -422,14 +429,14 @@ def generate_charts(y_true, predictions, best_name):
         mape = np.mean(np.abs((y_true - preds) / np.clip(y_true, 1, None))) * 100
         
         metrics_data.append({
-            "Algoritmo": name,
+            "Algorithm" if is_en else "Algoritmo": name,
             "R2": r2,
             "RMSE": rmse,
             "MAE": mae,
             "MAPE (%)": mape
         })
         
-    metrics_df = pd.DataFrame(metrics_data).set_index("Algoritmo")
+    metrics_df = pd.DataFrame(metrics_data).set_index("Algorithm" if is_en else "Algoritmo")
     
     # Standardize/Normalize each metric column (0 to 1) for visualization color scaling
     norm_df = metrics_df.copy()
@@ -445,7 +452,12 @@ def generate_charts(y_true, predictions, best_name):
         else:
             norm_df[col] = 1.0
             
-    plt.figure(figsize=(8, 5))
+    plt.figure(figsize=(10, 6))
+    cbar_label = 'Relative Performance (Green = Best, Red = Worst)' if is_en else 'Rendimiento Relativo (Verde = Mejor, Rojo = Peor)'
+    title_heat = "Comparative Heatmap of Metrics (Test Set)" if is_en else "Mapa de Calor Comparativo de Métricas (Test Set)"
+    y_label_heat = "Model / Algorithm" if is_en else "Modelo / Algoritmo"
+    x_label_heat = "Evaluation Metrics" if is_en else "Métricas de Evaluación"
+    
     # We use norm_df for color scaling, but metrics_df for the annotations
     sns.heatmap(
         norm_df, 
@@ -453,13 +465,13 @@ def generate_charts(y_true, predictions, best_name):
         fmt=".3f", 
         cmap="RdYlGn", 
         cbar=True,
-        cbar_kws={'label': 'Rendimiento Relativo (Verde = Mejor, Rojo = Peor)'}
+        cbar_kws={'label': cbar_label}
     )
-    plt.title("Mapa de Calor Comparativo de Métricas (Test Set)")
-    plt.ylabel("Modelo / Algoritmo")
-    plt.xlabel("Métricas de Evaluación")
+    plt.title(title_heat)
+    plt.ylabel(y_label_heat)
+    plt.xlabel(x_label_heat)
     plt.tight_layout()
-    plt.savefig(os.path.join(IMG_DIR, "heatmap_corr.png"), dpi=150)
+    plt.savefig(os.path.join(IMG_DIR, f"heatmap_corr{'_en' if is_en else ''}.png"), dpi=150)
     plt.close()
 
 
@@ -573,7 +585,7 @@ def run_statistical_tests(y_test, predictions_test, best_name):
     return tests_results
 
 
-def run_demand_forecast(db: Session):
+def run_demand_forecast(db: Session, lang="es"):
     """
     Inference: Predict demand for the next 7 days using the saved best model.
     """
@@ -584,7 +596,7 @@ def run_demand_forecast(db: Session):
         if df.empty:
             return []
         X, y, df, enc = preprocess_data(df)
-        train_results, best_name, y_test, preds_test = train_models(X, y, df)
+        train_results, best_name, y_test, preds_test = train_models(X, y, df, lang=lang)
         
     model_data = joblib.load(model_path)
     model = model_data["model"]
@@ -607,22 +619,25 @@ def run_demand_forecast(db: Session):
         month = future_date.month
         is_weekend = 1 if weekday in [4, 5, 6] else 0
         
-        formatted_date = future_date.strftime("%A, %d de %B de %Y")
-        # Translate to Spanish days/months
-        day_translations = {
-            "Monday": "lunes", "Tuesday": "martes", "Wednesday": "miércoles",
-            "Thursday": "jueves", "Friday": "viernes", "Saturday": "sábado", "Sunday": "domingo"
-        }
-        month_translations = {
-            "January": "enero", "February": "febrero", "March": "marzo",
-            "April": "abril", "May": "mayo", "June": "junio",
-            "July": "julio", "August": "agosto", "September": "septiembre",
-            "October": "octubre", "November": "noviembre", "December": "diciembre"
-        }
-        for eng, esp in day_translations.items():
-            formatted_date = formatted_date.replace(eng, esp)
-        for eng, esp in month_translations.items():
-            formatted_date = formatted_date.replace(eng, esp)
+        if lang == "en":
+            formatted_date = future_date.strftime("%A, %B %d, %Y")
+        else:
+            formatted_date = future_date.strftime("%A, %d de %B de %Y")
+            # Translate to Spanish days/months
+            day_translations = {
+                "Monday": "lunes", "Tuesday": "martes", "Wednesday": "miércoles",
+                "Thursday": "jueves", "Friday": "viernes", "Saturday": "sábado", "Sunday": "domingo"
+            }
+            month_translations = {
+                "January": "enero", "February": "febrero", "March": "marzo",
+                "April": "abril", "May": "mayo", "June": "junio",
+                "July": "julio", "August": "agosto", "September": "septiembre",
+                "October": "octubre", "November": "noviembre", "December": "diciembre"
+            }
+            for eng, esp in day_translations.items():
+                formatted_date = formatted_date.replace(eng, esp)
+            for eng, esp in month_translations.items():
+                formatted_date = formatted_date.replace(eng, esp)
             
         for p in products:
             # Build input row matching model columns
@@ -658,7 +673,7 @@ def run_demand_forecast(db: Session):
 
 # --- REPORT GENERATORS ---
 
-def generate_pdf_report(eda_stats, train_results, best_name, stat_tests, forecast_data, dest_path):
+def generate_pdf_report(eda_stats, train_results, best_name, stat_tests, forecast_data, dest_path, lang="es"):
     """
     Fase 6: Reporte PDF utilizando ReportLab
     """
@@ -717,30 +732,44 @@ def generate_pdf_report(eda_stats, train_results, best_name, stat_tests, forecas
     )
 
     story = []
+    is_en = lang == "en"
     
     # Title
-    story.append(Paragraph("Reporte Analítico y Demand Forecasting", title_style))
-    story.append(Paragraph(f"Restaurante Los Patos - Generado el {datetime.now().strftime('%d/%m/%Y a las %H:%M')}", subtitle_style))
+    title_text = "Analytical Report and Demand Forecasting" if is_en else "Reporte Analítico y Demand Forecasting"
+    gen_on = "Generated on" if is_en else "Generado el"
+    at_str = "at" if is_en else "a las"
+    story.append(Paragraph(title_text, title_style))
+    story.append(Paragraph(f"Restaurante Los Patos - {gen_on} {datetime.now().strftime('%d/%m/%Y')} {at_str} {datetime.now().strftime('%H:%M')}", subtitle_style))
     
     # 1. EDA
-    story.append(Paragraph("1. Análisis Exploratorio de Datos (EDA)", h2_style))
-    eda_text = f"El análisis descriptivo se realizó sobre un volumen histórico de <b>{int(eda_stats['count'])}</b> registros agregados de ventas. " \
-               f"La demanda promedio diaria general por artículo es de <b>{eda_stats['mean']} unidades</b>, con una desviación estándar de " \
-               f"<b>{eda_stats['std']} unidades</b>, registrándose un máximo de <b>{int(eda_stats['max'])} unidades</b> en un solo día."
+    eda_title = "1. Exploratory Data Analysis (EDA)" if is_en else "1. Análisis Exploratorio de Datos (EDA)"
+    story.append(Paragraph(eda_title, h2_style))
+    
+    if is_en:
+        eda_text = f"Exploratory analysis was performed on a historical volume of <b>{int(eda_stats['count'])}</b> aggregated sales records. " \
+                   f"The general daily average demand per item is <b>{eda_stats['mean']} units</b>, with a standard deviation of " \
+                   f"<b>{eda_stats['std']} units</b>, recording a maximum of <b>{int(eda_stats['max'])} units</b> in a single day."
+    else:
+        eda_text = f"El análisis descriptivo se realizó sobre un volumen histórico de <b>{int(eda_stats['count'])}</b> registros agregados de ventas. " \
+                   f"La demanda promedio diaria general por artículo es de <b>{eda_stats['mean']} unidades</b>, con una desviación estándar de " \
+                   f"<b>{eda_stats['std']} unidades</b>, registrándose un máximo de <b>{int(eda_stats['max'])} unidades</b> en un solo día."
     story.append(Paragraph(eda_text, body_style))
     
     # 2. Modelos
-    story.append(Paragraph("2. Comparación de Modelos de Redes Neuronales & Machine Learning", h2_style))
-    story.append(Paragraph("Se entrenaron y compararon 3 modelos clásicos y 2 modelos híbridos de regresión en un esquema de partición 80-20. A continuación, se detallan los estadísticos y métricas de error:", body_style))
+    models_title = "2. Comparison of Neural Networks & Machine Learning Models" if is_en else "2. Comparación de Modelos de Redes Neuronales & Machine Learning"
+    story.append(Paragraph(models_title, h2_style))
+    
+    models_intro = "3 classical models and 2 hybrid regression models were trained and compared in an 80-20 partition scheme. Below are the details of the error metrics and statistics:" if is_en else "Se entrenaron y compararon 3 modelos clásicos y 2 modelos híbridos de regresión en un esquema de partición 80-20. A continuación, se detallan los estadísticos y métricas de error:"
+    story.append(Paragraph(models_intro, body_style))
     
     # Table of models
     table_data = [[
-        Paragraph("Algoritmo", table_header_style),
+        Paragraph("Algorithm" if is_en else "Algoritmo", table_header_style),
         Paragraph("R² Score", table_header_style),
         Paragraph("RMSE", table_header_style),
         Paragraph("MAE", table_header_style),
         Paragraph("MAPE (%)", table_header_style),
-        Paragraph("Tiempo Proc. (ms)", table_header_style)
+        Paragraph("Proc. Time (ms)" if is_en else "Tiempo Proc. (ms)", table_header_style)
     ]]
     for name, metrics in train_results.items():
         table_data.append([
@@ -764,24 +793,37 @@ def generate_pdf_report(eda_stats, train_results, best_name, stat_tests, forecas
     story.append(t)
     story.append(Spacer(1, 10))
     
-    story.append(Paragraph(f"<b>Interpretación:</b> El modelo seleccionado como el mejor estimador es <b>{best_name}</b> debido a que exhibe el menor error cuadrático medio (RMSE) de <b>{train_results[best_name]['rmse']}</b> y un coeficiente de determinación R² de <b>{train_results[best_name]['r2']*100:.1f}%</b>, indicando una robusta capacidad predictiva sobre la variabilidad de la demanda diaria.", body_style))
+    if is_en:
+        interpretation = f"<b>Interpretation:</b> The model selected as the best estimator is <b>{best_name}</b> because it exhibits the lowest root mean squared error (RMSE) of <b>{train_results[best_name]['rmse']}</b> and a determination coefficient R² of <b>{train_results[best_name]['r2']*100:.1f}%</b>, indicating a robust predictive capacity over daily demand variability."
+    else:
+        interpretation = f"<b>Interpretación:</b> El modelo seleccionado como el mejor estimador es <b>{best_name}</b> debido a que exhibe el menor error cuadrático medio (RMSE) de <b>{train_results[best_name]['rmse']}</b> y un coeficiente de determinación R² de <b>{train_results[best_name]['r2']*100:.1f}%</b>, indicando una robusta capacidad predictiva sobre la variabilidad de la demanda diaria."
+    story.append(Paragraph(interpretation, body_style))
     
     # 3. Robust Testing
-    story.append(Paragraph("3. Pruebas Estadísticas Robustas de Validación", h2_style))
-    story.append(Paragraph("Para garantizar que la superioridad del modelo ganador no es producto del azar, se aplicaron pruebas de significancia pareada Wilcoxon y Student-T sobre los residuos absolutos del conjunto de prueba (Alpha=0.05):", body_style))
+    robust_title = "3. Robust Statistical Validation Tests" if is_en else "3. Pruebas Estadísticas Robustas de Validación"
+    story.append(Paragraph(robust_title, h2_style))
+    
+    robust_intro = "To guarantee that the superiority of the winning model is not a product of chance, paired Wilcoxon and Student-T significance tests were applied to the absolute residuals of the test set (Alpha=0.05):" if is_en else "Para garantizar que la superioridad del modelo ganador no es producto del azar, se aplicaron pruebas de significancia pareada Wilcoxon y Student-T sobre los residuos absolutos del conjunto de prueba (Alpha=0.05):"
+    story.append(Paragraph(robust_intro, body_style))
     
     test_data = [[
-        Paragraph("Modelo Comparado", table_header_style),
-        Paragraph("Prueba Wilcoxon (p)", table_header_style),
-        Paragraph("Prueba Student T (p)", table_header_style),
-        Paragraph("Resultado", table_header_style)
+        Paragraph("Compared Model" if is_en else "Modelo Comparado", table_header_style),
+        Paragraph("Wilcoxon Test (p)" if is_en else "Prueba Wilcoxon (p)", table_header_style),
+        Paragraph("Student-T Test (p)" if is_en else "Prueba Student T (p)", table_header_style),
+        Paragraph("Result" if is_en else "Resultado", table_header_style)
     ]]
     for t_res in stat_tests:
+        res_str = ""
+        if is_en:
+            res_str = "Significant Difference" if t_res['significativo'] else "No Significant Difference"
+        else:
+            res_str = "Diferencia Significativa" if t_res['significativo'] else "Sin Diferencia Significativa"
+            
         test_data.append([
             Paragraph(t_res['comparador'], table_body_style),
             Paragraph(f"{t_res['wilcoxon_p_value']:.5f}", table_body_style),
             Paragraph(f"{t_res['t_p_value']:.5f}", table_body_style),
-            Paragraph("Diferencia Significativa" if t_res['significativo'] else "Sin Diferencia Significativa", table_body_style)
+            Paragraph(res_str, table_body_style)
         ])
     t_test = Table(test_data, colWidths=[180, 110, 110, 120])
     t_test.setStyle(TableStyle([
@@ -794,10 +836,11 @@ def generate_pdf_report(eda_stats, train_results, best_name, stat_tests, forecas
     story.append(Spacer(1, 15))
     
     # Images (ROC and Confusion Matrix)
-    story.append(Paragraph("4. Visualizaciones de Calidad del Modelo", h2_style))
+    visual_title = "4. Model Quality Visualizations" if is_en else "4. Visualizaciones de Calidad del Modelo"
+    story.append(Paragraph(visual_title, h2_style))
     
-    img_roc_path = os.path.join(IMG_DIR, "roc_curve.png")
-    img_cm_path = os.path.join(IMG_DIR, "confusion_matrix.png")
+    img_roc_path = os.path.join(IMG_DIR, f"roc_curve{'_en' if is_en else ''}.png")
+    img_cm_path = os.path.join(IMG_DIR, f"confusion_matrix{'_en' if is_en else ''}.png")
     
     if os.path.exists(img_roc_path) and os.path.exists(img_cm_path):
         img_data = [
@@ -810,24 +853,29 @@ def generate_pdf_report(eda_stats, train_results, best_name, stat_tests, forecas
         ]))
         story.append(t_imgs)
         story.append(Spacer(1, 10))
-        story.append(Paragraph("<b>Figura:</b> A la izquierda se presenta la curva ROC y sus correspondientes valores AUC tras binarizar la demanda en rangos (Bajo, Medio, Alto). A la derecha se visualiza la matriz de confusión del clasificador equivalente, evidenciando una concentración diagonal de aciertos.", body_style))
+        
+        figure_desc = "<b>Figure:</b> On the left is the ROC curve and its corresponding AUC values after binning the demand into ranges (Low, Medium, High). On the right is the confusion matrix of the equivalent classifier, showing a diagonal concentration of correct classifications." if is_en else "<b>Figura:</b> A la izquierda se presenta la curva ROC y sus correspondientes valores AUC tras binarizar la demanda en rangos (Bajo, Medio, Alto). A la derecha se visualiza la matriz de confusión del clasificador equivalente, evidenciando una concentración diagonal de aciertos."
+        story.append(Paragraph(figure_desc, body_style))
     
     # 5. Forecast 7 Days
-    story.append(Paragraph("5. Proyección de Demanda para los Siguientes 7 Días", h2_style))
-    story.append(Paragraph("A continuación se muestra una muestra de las proyecciones calculadas para los próximos días utilizando el modelo predictivo óptimo guardado en producción:", body_style))
+    fore_title = "5. Demand Forecast for the Next 7 Days" if is_en else "5. Proyección de Demanda para los Siguientes 7 Días"
+    story.append(Paragraph(fore_title, h2_style))
+    
+    fore_desc = "Below is a sample of the projections calculated for the next few days using the optimal predictive model saved in production:" if is_en else "A continuación se muestra una muestra de las proyecciones calculadas para los próximos días utilizando el modelo predictivo óptimo guardado en producción:"
+    story.append(Paragraph(fore_desc, body_style))
     
     fore_data = [[
-        Paragraph("Producto", table_header_style),
-        Paragraph("Fecha Proyectada", table_header_style),
-        Paragraph("Demanda Sugerida", table_header_style),
-        Paragraph("Nivel Confianza (%)", table_header_style)
+        Paragraph("Product" if is_en else "Producto", table_header_style),
+        Paragraph("Projected Date" if is_en else "Fecha Proyectada", table_header_style),
+        Paragraph("Suggested Demand" if is_en else "Demanda Sugerida", table_header_style),
+        Paragraph("Confidence Level (%)" if is_en else "Nivel Confianza (%)", table_header_style)
     ]]
     # limit to first 10 rows for PDF layout brevity
     for f_row in forecast_data[:10]:
         fore_data.append([
             Paragraph(f_row['nombre'], table_body_style),
             Paragraph(f_row['fecha'], table_body_style),
-            Paragraph(f"{f_row['demanda']} unidades", table_body_style),
+            Paragraph(f"{f_row['demanda']} units" if is_en else f"{f_row['demanda']} unidades", table_body_style),
             Paragraph(f"{f_row['confianza']}%", table_body_style)
         ])
     t_fore = Table(fore_data, colWidths=[150, 180, 100, 90])
@@ -843,33 +891,49 @@ def generate_pdf_report(eda_stats, train_results, best_name, stat_tests, forecas
     print(f"PDF generado con éxito: {dest_path}")
 
 
-def generate_word_report(eda_stats, train_results, best_name, stat_tests, forecast_data, dest_path):
+def generate_word_report(eda_stats, train_results, best_name, stat_tests, forecast_data, dest_path, lang="es"):
     """
     Fase 6: Reporte Word utilizando python-docx
     """
     doc = Document()
-    doc.add_heading("Reporte Científico de Modelado Predictivo", 0)
+    is_en = lang == "en"
+    
+    title_text = "Scientific Report on Predictive Modeling" if is_en else "Reporte Científico de Modelado Predictivo"
+    doc.add_heading(title_text, 0)
     
     # Intro
-    p = doc.add_paragraph("Este informe detalla la metodología científica y los resultados analíticos para el modelado de la demanda de platos en el restaurante 'Los Patos'. El objetivo principal es reducir las mermas alimentarias y optimizar los niveles de compra mediante pronósticos basados en inteligencia artificial.")
+    if is_en:
+        intro_text = "This report details the scientific methodology and analytical results for modeling dish demand at 'Los Patos' restaurant. The main objective is to reduce food waste and optimize purchasing levels through forecasts based on artificial intelligence."
+    else:
+        intro_text = "Este informe detalla la metodología científica y los resultados analíticos para el modelado de la demanda de platos en el restaurante 'Los Patos'. El objetivo principal es reducir las mermas alimentarias y optimizar los niveles de compra mediante pronósticos basados en inteligencia artificial."
+    doc.add_paragraph(intro_text)
     
     # EDA
-    doc.add_heading("1. Análisis Estadístico Descriptivo (EDA)", level=1)
-    doc.add_paragraph(f"Se analizó un historial compuesto por {int(eda_stats['count'])} observaciones diarias. La demanda media global se sitúa en {eda_stats['mean']} platos con una volatilidad estándar de {eda_stats['std']}. El consumo máximo alcanzado en un día fue de {int(eda_stats['max'])} unidades.")
+    eda_title = "1. Exploratory Data Analysis (EDA)" if is_en else "1. Análisis Estadístico Descriptivo (EDA)"
+    doc.add_heading(eda_title, level=1)
+    
+    if is_en:
+        eda_desc = f"A sales history consisting of {int(eda_stats['count'])} daily observations was analyzed. The overall average daily demand is {eda_stats['mean']} dishes with a standard deviation of {eda_stats['std']}. The maximum consumption reached in a single day was {int(eda_stats['max'])} units."
+    else:
+        eda_desc = f"Se analizó un historial compuesto por {int(eda_stats['count'])} observaciones diarias. La demanda media global se sitúa en {eda_stats['mean']} platos con una volatilidad estándar de {eda_stats['std']}. El consumo máximo alcanzado en un día fue de {int(eda_stats['max'])} unidades."
+    doc.add_paragraph(eda_desc)
     
     # Model Table
-    doc.add_heading("2. Comparación de Desempeño de Algoritmos", level=1)
-    doc.add_paragraph("Se contrastaron tres aproximaciones clásicas y dos modelos híbridos ensamblados. Las métricas obtenidas sobre el conjunto de testeo son:")
+    models_title = "2. Algorithm Performance Comparison" if is_en else "2. Comparación de Desempeño de Algoritmos"
+    doc.add_heading(models_title, level=1)
+    
+    models_desc = "Three classical approaches and two hybrid ensemble models were contrasted. The metrics obtained on the testing set are:" if is_en else "Se contrastaron tres aproximaciones clásicas y dos modelos híbridos ensamblados. Las métricas obtenidas sobre el conjunto de testeo son:"
+    doc.add_paragraph(models_desc)
     
     table = doc.add_table(rows=1, cols=6)
     table.style = 'Light Shading Accent 1'
     hdr_cells = table.rows[0].cells
-    hdr_cells[0].text = 'Algoritmo'
+    hdr_cells[0].text = 'Algorithm' if is_en else 'Algoritmo'
     hdr_cells[1].text = 'R2'
     hdr_cells[2].text = 'RMSE'
     hdr_cells[3].text = 'MAE'
     hdr_cells[4].text = 'MAPE'
-    hdr_cells[5].text = 'Tiempo (ms)'
+    hdr_cells[5].text = 'Time (ms)' if is_en else 'Tiempo (ms)'
     
     for name, metrics in train_results.items():
         row_cells = table.add_row().cells
@@ -880,85 +944,102 @@ def generate_word_report(eda_stats, train_results, best_name, stat_tests, foreca
         row_cells[4].text = f"{metrics['mape']}%"
         row_cells[5].text = f"{metrics['time_ms']:.1f}"
         
-    doc.add_paragraph(f"El modelo estadísticamente superior es '{best_name}', logrando un R² de {train_results[best_name]['r2']*100:.1f}% y RMSE de {train_results[best_name]['rmse']}.")
+    if is_en:
+        interpretation = f"The statistically superior model is '{best_name}', achieving an R² of {train_results[best_name]['r2']*100:.1f}% and RMSE of {train_results[best_name]['rmse']}."
+    else:
+        interpretation = f"El modelo estadísticamente superior es '{best_name}', logrando un R² de {train_results[best_name]['r2']*100:.1f}% y RMSE de {train_results[best_name]['rmse']}."
+    doc.add_paragraph(interpretation)
     
     # Statistical Tests
-    doc.add_heading("3. Pruebas de Hipótesis Robustas (Validación)", level=1)
-    doc.add_paragraph("Para certificar la significancia de los errores, se aplicaron pruebas de Wilcoxon de rangos signados y t de Student:")
+    stats_title = "3. Robust Hypothesis Testing (Validation)" if is_en else "3. Pruebas de Hipótesis Robustas (Validación)"
+    doc.add_heading(stats_title, level=1)
+    
+    stats_desc = "To certify the significance of the errors, Wilcoxon signed-rank and Student-t tests were applied:" if is_en else "Para certificar la significancia de los errores, se aplicaron pruebas de Wilcoxon de rangos signados y t de Student:"
+    doc.add_paragraph(stats_desc)
     
     t_table = doc.add_table(rows=1, cols=4)
     t_table.style = 'Light Shading Accent 1'
     t_hdr = t_table.rows[0].cells
-    t_hdr[0].text = 'Modelo Comparado'
+    t_hdr[0].text = 'Compared Model' if is_en else 'Modelo Comparado'
     t_hdr[1].text = 'Wilcoxon (p-val)'
     t_hdr[2].text = 'Student-T (p-val)'
-    t_hdr[3].text = 'Resultado Signficación'
+    t_hdr[3].text = 'Significance Result' if is_en else 'Resultado Signficación'
     
     for t_res in stat_tests:
         r_cells = t_table.add_row().cells
         r_cells[0].text = t_res['comparador']
         r_cells[1].text = f"{t_res['wilcoxon_p_value']:.5f}"
         r_cells[2].text = f"{t_res['t_p_value']:.5f}"
-        r_cells[3].text = "Significativo (p < 0.05)" if t_res['significativo'] else "No Significativo"
+        if is_en:
+            r_cells[3].text = "Significant (p < 0.05)" if t_res['significativo'] else "Not Significant"
+        else:
+            r_cells[3].text = "Significativo (p < 0.05)" if t_res['significativo'] else "No Significativo"
         
     # Forecast
-    doc.add_heading("4. Proyecciones Generadas a 7 Días", level=1)
-    doc.add_paragraph("Predicciones de demanda sugerida de platos para compras de insumos:")
+    forecast_title = "4. Projections Generated for 7 Days" if is_en else "4. Proyecciones Generadas a 7 Días"
+    doc.add_heading(forecast_title, level=1)
+    
+    forecast_desc = "Suggested demand predictions of dishes for inventory purchasing:" if is_en else "Predicciones de demanda sugerida de platos para compras de insumos:"
+    doc.add_paragraph(forecast_desc)
     
     f_table = doc.add_table(rows=1, cols=4)
     f_table.style = 'Light Shading Accent 1'
     f_hdr = f_table.rows[0].cells
-    f_hdr[0].text = 'Producto'
-    f_hdr[1].text = 'Fecha'
-    f_hdr[2].text = 'Predicción Demanda'
-    f_hdr[3].text = 'Confianza'
+    f_hdr[0].text = 'Product' if is_en else 'Producto'
+    f_hdr[1].text = 'Date' if is_en else 'Fecha'
+    f_hdr[2].text = 'Demand Prediction' if is_en else 'Predicción Demanda'
+    f_hdr[3].text = 'Confidence' if is_en else 'Confianza'
     
     for f_row in forecast_data[:12]:
         rf_cells = f_table.add_row().cells
         rf_cells[0].text = f_row['nombre']
         rf_cells[1].text = f_row['fecha']
-        rf_cells[2].text = f"{f_row['demanda']} uds"
+        rf_cells[2].text = f"{f_row['demanda']} units" if is_en else f"{f_row['demanda']} uds"
         rf_cells[3].text = f"{f_row['confianza']}%"
         
     doc.save(dest_path)
     print(f"Word generado con éxito: {dest_path}")
 
 
-def generate_excel_report(eda_stats, train_results, best_name, stat_tests, forecast_data, dest_path):
+def generate_excel_report(eda_stats, train_results, best_name, stat_tests, forecast_data, dest_path, lang="es"):
     """
     Fase 6: Reporte Excel utilizando openpyxl
     """
     wb = Workbook()
+    is_en = lang == "en"
     
     # Sheet 1: KPIs y Métricas
     ws1 = wb.active
-    ws1.title = "Metricas Modelos"
-    ws1.append(["Comparativa de Modelos de Demanda (Venta de Platos)"])
+    ws1.title = "Model Metrics" if is_en else "Metricas Modelos"
+    ws1.append(["Demand Model Comparison (Dish Sales)" if is_en else "Comparativa de Modelos de Demanda (Venta de Platos)"])
     ws1.append([])
-    ws1.append(["Algoritmo", "RMSE", "MAE", "R2", "MAPE (%)", "Tiempo Entrenamiento (ms)"])
+    
+    headers_ws1 = ["Algorithm", "RMSE", "MAE", "R2", "MAPE (%)", "Training Time (ms)"] if is_en else ["Algoritmo", "RMSE", "MAE", "R2", "MAPE (%)", "Tiempo Entrenamiento (ms)"]
+    ws1.append(headers_ws1)
     for name, m in train_results.items():
         ws1.append([name, m["rmse"], m["mae"], m["r2"], m["mape"], m["time_ms"]])
     ws1.append([])
-    ws1.append(["Mejor Modelo Seleccionado:", best_name])
+    ws1.append(["Best Selected Model:" if is_en else "Mejor Modelo Seleccionado:", best_name])
     
     # Sheet 2: Proyecciones a 7 Días
-    ws2 = wb.create_sheet(title="Proyecciones Demanda")
-    ws2.append(["Producto", "Fecha Proyectada", "Demanda (Unidades)", "Algoritmo Utilizado", "Nivel de Confianza (%)"])
+    ws2 = wb.create_sheet(title="Demand Forecast" if is_en else "Proyecciones Demanda")
+    headers_ws2 = ["Product", "Projected Date", "Demand (Units)", "Algorithm Used", "Confidence Level (%)"] if is_en else ["Producto", "Fecha Proyectada", "Demanda (Unidades)", "Algoritmo Utilizado", "Nivel de Confianza (%)"]
+    ws2.append(headers_ws2)
     for row in forecast_data:
         ws2.append([row["nombre"], row["fecha"], row["demanda"], row["algoritmo"], row["confianza"]])
         
     # Sheet 3: Estadísticos EDA
-    ws3 = wb.create_sheet(title="Descriptivos EDA")
-    ws3.append(["Metrica Descriptiva General", "Valor"])
-    ws3.append(["Cantidad Registros Historial", eda_stats["count"]])
-    ws3.append(["Promedio Demanda Diaria", eda_stats["mean"]])
-    ws3.append(["Desviación Estándar", eda_stats["std"]])
-    ws3.append(["Demanda Diaria Mínima", eda_stats["min"]])
-    ws3.append(["Demanda Diaria Máxima", eda_stats["max"]])
-    ws3.append(["Mediana", eda_stats["median"]])
+    ws3 = wb.create_sheet(title="EDA Descriptors" if is_en else "Descriptivos EDA")
+    ws3.append(["General Descriptive Metric" if is_en else "Metrica Descriptiva General", "Value" if is_en else "Valor"])
+    ws3.append(["History Records Count" if is_en else "Cantidad Registros Historial", eda_stats["count"]])
+    ws3.append(["Daily Average Demand" if is_en else "Promedio Demanda Diaria", eda_stats["mean"]])
+    ws3.append(["Standard Deviation" if is_en else "Desviación Estándar", eda_stats["std"]])
+    ws3.append(["Minimum Daily Demand" if is_en else "Demanda Diaria Mínima", eda_stats["min"]])
+    ws3.append(["Maximum Daily Demand" if is_en else "Demanda Diaria Máxima", eda_stats["max"]])
+    ws3.append(["Median" if is_en else "Mediana", eda_stats["median"]])
     ws3.append([])
-    ws3.append(["Descriptivos por Producto"])
-    ws3.append(["Producto", "Promedio", "Desv. Est.", "Min", "Max"])
+    ws3.append(["Descriptive Metrics by Product" if is_en else "Descriptivos por Producto"])
+    ws3.append(["Product" if is_en else "Producto", "Average" if is_en else "Promedio", "Std. Dev." if is_en else "Desv. Est.", "Min", "Max"])
     for p_s in eda_stats["prod_stats"]:
         ws3.append([p_s["nombre"], p_s["mean"], p_s["std"], p_s["min"], p_s["max"]])
         

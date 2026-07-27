@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "../LanguageContext";
 
 
 import { 
@@ -77,6 +78,8 @@ interface EdaStats {
 }
 
 export const Predicts: React.FC = () => {
+  const { t, language } = useTranslation();
+  const isEn = language === "en";
 
   const [comparing, setComparing] = useState<boolean>(false);
   const [generating, setGenerating] = useState<boolean>(false);
@@ -107,7 +110,7 @@ export const Predicts: React.FC = () => {
   useEffect(() => {
     // Silent pre-load of predictions if model is already trained
     fetchForecast();
-  }, []);
+  }, [language]);
 
   const triggerToast = (message: string, type: "success" | "info" = "success") => {
     setToast({ message, type });
@@ -117,7 +120,7 @@ export const Predicts: React.FC = () => {
   // FETCH FORECAST DIRECTLY
   const fetchForecast = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/predicts/forecast");
+      const res = await fetch(`http://localhost:8000/api/predicts/forecast?lang=${language}`);
       if (res.ok) {
         const data = await res.json();
         setPredictions(data || []);
@@ -131,7 +134,7 @@ export const Predicts: React.FC = () => {
   const handleCompareModels = async () => {
     setComparing(true);
     try {
-      const res = await fetch("http://localhost:8000/api/predicts/train", {
+      const res = await fetch(`http://localhost:8000/api/predicts/train?lang=${language}`, {
         method: "POST"
       });
       if (!res.ok) throw new Error("Error en el servidor");
@@ -150,11 +153,11 @@ export const Predicts: React.FC = () => {
       setModelResults(rows);
       setBestModelName(data.best_model);
       setChartsVersion(Date.now()); // Refresh charts to bypass cache
-      triggerToast("¡Los 5 modelos han sido reentrenados y evaluados en el servidor!");
+      triggerToast(isEn ? "The 5 models have been retrained and evaluated on the server!" : "¡Los 5 modelos han sido reentrenados y evaluados en el servidor!");
       // Automatically refresh demand forecast table
       fetchForecast();
     } catch (e) {
-      triggerToast("Ocurrió un error al entrenar los modelos.", "info");
+      triggerToast(isEn ? "An error occurred while training models." : "Ocurrió un error al entrenar los modelos.", "info");
     } finally {
       setComparing(false);
     }
@@ -164,13 +167,13 @@ export const Predicts: React.FC = () => {
   const handleGeneratePredictions = async () => {
     setGenerating(true);
     try {
-      const res = await fetch("http://localhost:8000/api/predicts/forecast");
+      const res = await fetch(`http://localhost:8000/api/predicts/forecast?lang=${language}`);
       if (!res.ok) throw new Error("Error en el servidor");
       const data = await res.json();
       setPredictions(data || []);
-      triggerToast("¡Predicciones de demanda sugeridas para los próximos 7 días!");
+      triggerToast(isEn ? "Suggested demand predictions for the next 7 days generated!" : "¡Predicciones de demanda sugeridas para los próximos 7 días!");
     } catch (e) {
-      triggerToast("Error al obtener la proyección de demanda.", "info");
+      triggerToast(isEn ? "Error obtaining demand projection." : "Error al obtener la proyección de demanda.", "info");
     } finally {
       setGenerating(false);
     }
@@ -186,9 +189,9 @@ export const Predicts: React.FC = () => {
       if (!res.ok) throw new Error("Error en el tuning");
       const data = await res.json();
       setTunedParams(data);
-      triggerToast("Hiperparámetros optimizados con GridSearchCV exitosamente.");
+      triggerToast(isEn ? "Hyperparameters optimized with GridSearchCV successfully." : "Hiperparámetros optimizados con GridSearchCV exitosamente.");
     } catch (e) {
-      triggerToast("Error al sintonizar parámetros.", "info");
+      triggerToast(isEn ? "Error tuning parameters." : "Error al sintonizar parámetros.", "info");
     } finally {
       setOptimizing(false);
     }
@@ -198,13 +201,13 @@ export const Predicts: React.FC = () => {
   const handleStatisticalValidation = async () => {
     setValidating(true);
     try {
-      const res = await fetch("http://localhost:8000/api/predicts/statistical_tests");
+      const res = await fetch(`http://localhost:8000/api/predicts/statistical_tests?lang=${language}`);
       if (!res.ok) throw new Error("Error en test");
       const data = await res.json();
       setStatTests(data || []);
-      triggerToast("Pruebas estadísticas ejecutadas sobre los residuos absolutos.");
+      triggerToast(isEn ? "Statistical tests executed on absolute residuals." : "Pruebas estadísticas ejecutadas sobre los residuos absolutos.");
     } catch (e) {
-      triggerToast("Error al ejecutar análisis estadístico.", "info");
+      triggerToast(isEn ? "Error executing statistical analysis." : "Error al ejecutar análisis estadístico.", "info");
     } finally {
       setValidating(false);
     }
@@ -225,9 +228,9 @@ export const Predicts: React.FC = () => {
         r2_std: val.r2_std
       }));
       setCvResults(rows);
-      triggerToast(`Validación Cruzada completada en K=${cvFolds} folds.`);
+      triggerToast(isEn ? `Cross Validation completed in K=${cvFolds} folds.` : `Validación Cruzada completada en K=${cvFolds} folds.`);
     } catch (e) {
-      triggerToast("Error al correr Validación Cruzada.", "info");
+      triggerToast(isEn ? "Error running Cross Validation." : "Error al correr Validación Cruzada.", "info");
     } finally {
       setRunningCv(false);
     }
@@ -241,12 +244,22 @@ export const Predicts: React.FC = () => {
       if (!res.ok) throw new Error("Error en EDA");
       const data = await res.json();
       setEdaStats(data);
-      triggerToast("Datos históricos analizados descriptivamente.");
+      triggerToast(isEn ? "Historical data descriptively analyzed." : "Datos históricos analizados descriptivamente.");
     } catch (e) {
-      triggerToast("Error al cargar descriptivos EDA.", "info");
+      triggerToast(isEn ? "Error loading EDA descriptors." : "Error al cargar descriptivos EDA.", "info");
     } finally {
       setLoadingEda(false);
     }
+  };
+
+  const getTranslatedAlgoName = (name: string) => {
+    if (!isEn) return name;
+    if (name === "Regresion Lineal") return "Linear Regression";
+    if (name === "Random Forest") return "Random Forest";
+    if (name === "Red Neuronal MLP") return "MLP Neural Network";
+    if (name === "Hibrido Lineal-MLP") return "Linear-MLP Hybrid";
+    if (name === "Hibrido Stacking (RF+MLP)") return "Stacking Hybrid (RF+MLP)";
+    return name;
   };
 
   return (
@@ -264,7 +277,7 @@ export const Predicts: React.FC = () => {
         <div className="demand-header-left">
           <div className="demand-title-row">
             <span className="brain-emoji" role="img" aria-label="brain">🧠</span>
-            <h1>Redes Neuronales y Predicción de Demanda</h1>
+            <h1>{t("Redes Neuronales y Predicción de Demanda")}</h1>
           </div>
           <div className="algorithms-badges-row">
             {ALGORITHMS.map((algo, i) => (
@@ -273,7 +286,7 @@ export const Predicts: React.FC = () => {
                 className="algo-badge"
                 style={{ backgroundColor: algo.bg, color: algo.color }}
               >
-                {algo.name}
+                {getTranslatedAlgoName(algo.name)}
               </span>
             ))}
           </div>
@@ -281,15 +294,16 @@ export const Predicts: React.FC = () => {
         
         {/* Reports Download Area */}
         <div className="download-reports-area">
-          <a href="http://localhost:8000/api/predicts/reports/pdf" target="_blank" rel="noreferrer" className="btn-report-download pdf">
+          <span className="download-label">{isEn ? "Download Reports:" : "Descargar Reportes Científicos:"}</span>
+          <a href={`http://localhost:8000/api/predicts/reports/pdf?lang=${language}`} target="_blank" rel="noreferrer" className="btn-report-download pdf">
             <FileText size={16} />
             PDF
           </a>
-          <a href="http://localhost:8000/api/predicts/reports/word" target="_blank" rel="noreferrer" className="btn-report-download docx">
+          <a href={`http://localhost:8000/api/predicts/reports/word?lang=${language}`} target="_blank" rel="noreferrer" className="btn-report-download docx">
             <FileText size={16} />
             Word
           </a>
-          <a href="http://localhost:8000/api/predicts/reports/excel" target="_blank" rel="noreferrer" className="btn-report-download xlsx">
+          <a href={`http://localhost:8000/api/predicts/reports/excel?lang=${language}`} target="_blank" rel="noreferrer" className="btn-report-download xlsx">
             <FileSpreadsheet size={16} />
             Excel
           </a>
@@ -304,7 +318,7 @@ export const Predicts: React.FC = () => {
           disabled={comparing}
         >
           <Sparkles size={16} className={comparing ? "animate-spin" : ""} />
-          {comparing ? "Entrenando Modelos..." : "Comparar 5 Modelos (Servidor)"}
+          {comparing ? t("Entrenando Modelos...") : t("Comparar 5 Modelos (Servidor)")}
         </button>
         <button 
           className="op-btn blue" 
@@ -312,7 +326,7 @@ export const Predicts: React.FC = () => {
           disabled={generating}
         >
           <Calendar size={16} className={generating ? "animate-spin" : ""} />
-          {generating ? "Proyectando..." : "Generar Predicciones (7 días)"}
+          {generating ? t("Proyectando...") : t("Generar Predicciones (7 días)")}
         </button>
         <button 
           className="op-btn dark-blue" 
@@ -320,7 +334,7 @@ export const Predicts: React.FC = () => {
           disabled={optimizing}
         >
           <Sliders size={16} className={optimizing ? "animate-spin" : ""} />
-          {optimizing ? "Sintonizando..." : "Tuning Hiperparámetros"}
+          {optimizing ? t("Sintonizando...") : t("Tuning Hiperparámetros")}
         </button>
         <button 
           className="op-btn yellow-blue" 
@@ -328,26 +342,26 @@ export const Predicts: React.FC = () => {
           disabled={loadingEda}
         >
           <BarChart size={16} className={loadingEda ? "animate-spin" : ""} />
-          {loadingEda ? "Calculando..." : "Análisis EDA Descriptivo"}
+          {loadingEda ? t("Calculando...") : t("Análisis EDA Descriptivo")}
         </button>
       </div>
 
       {/* Navigation tabs for pipeline parts */}
       <div className="pipeline-tabs-nav glass-panel">
         <button className={`tab-nav-btn ${activeTab === "train" ? "active" : ""}`} onClick={() => setActiveTab("train")}>
-          1 & 2. Entrenamiento y Curvas
+          {t("1 & 2. Entrenamiento y Curvas")}
         </button>
         <button className={`tab-nav-btn ${activeTab === "cv" ? "active" : ""}`} onClick={() => setActiveTab("cv")}>
-          3. Validación Cruzada (K-Fold)
+          {t("3. Validación Cruzada (K-Fold)")}
         </button>
         <button className={`tab-nav-btn ${activeTab === "tuning" ? "active" : ""}`} onClick={() => setActiveTab("tuning")}>
-          4. Hiperparámetros (Tuning)
+          {t("4. Hiperparámetros (Tuning)")}
         </button>
         <button className={`tab-nav-btn ${activeTab === "stats" ? "active" : ""}`} onClick={() => { setActiveTab("stats"); handleStatisticalValidation(); }}>
-          5. Pruebas Estadísticas Robustas
+          {t("5. Pruebas Estadísticas Robustas")}
         </button>
         <button className={`tab-nav-btn ${activeTab === "eda" ? "active" : ""}`} onClick={() => { setActiveTab("eda"); handleLoadEda(); }}>
-          Fase EDA Histórico
+          {t("Fase EDA Histórico")}
         </button>
       </div>
 
@@ -360,30 +374,30 @@ export const Predicts: React.FC = () => {
             <div className="demand-glass-panel">
               <div className="panel-title-row">
                 <span className="trophy-emoji" role="img" aria-label="trophy">🏆</span>
-                <h3>Precisión de los Modelos Entrenados</h3>
+                <h3>{t("Precisión de los Modelos Entrenados")}</h3>
               </div>
               
               {comparing ? (
                 <div className="table-loader-wrapper">
                   <div className="spinner"></div>
-                  <span>Entrenando modelos lineales, bosques y redes neuronales en el servidor...</span>
+                  <span>{t("Entrenando modelos lineales, bosques y redes neuronales en el servidor...")}</span>
                 </div>
               ) : modelResults.length === 0 ? (
                 <div className="empty-table-placeholder">
                   <Activity size={32} className="text-muted" />
-                  <span>Presione "Comparar 5 Modelos (Servidor)" para iniciar el entrenamiento y obtener estadísticos.</span>
+                  <span>{t("Presione \"Comparar 5 Modelos (Servidor)\" para iniciar el entrenamiento y obtener estadísticos.")}</span>
                 </div>
               ) : (
                 <div className="demand-table-container">
                   <table className="demand-custom-table">
                     <thead>
                       <tr>
-                        <th>ALGORITMO</th>
-                        <th>R² (PRECISIÓN)</th>
-                        <th>RMSE (ERROR MEDIO)</th>
-                        <th>MAE (ERR. ABSOLUTO)</th>
-                        <th>MAPE (ERROR %)</th>
-                        <th>TIEMPO DE PROCESO</th>
+                        <th>{t("ALGORITMO")}</th>
+                        <th>{t("R² (PRECISIÓN)")}</th>
+                        <th>{t("RMSE (ERROR MEDIO)")}</th>
+                        <th>{t("MAE (ERR. ABSOLUTO)")}</th>
+                        <th>{t("MAPE (ERROR %)")}</th>
+                        <th>{t("TIEMPO DE PROCESO")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -396,7 +410,7 @@ export const Predicts: React.FC = () => {
                         return (
                           <tr key={idx} className={isBest ? "best-model-row" : ""}>
                             <td className="product-name-cell">
-                              {row.algoritmo} {isBest && " 🌟 (Mejor Modelo)"}
+                              {getTranslatedAlgoName(row.algoritmo)} {isBest && (isEn ? " 🌟 (Best Model)" : " 🌟 (Mejor Modelo)")}
                             </td>
                             <td className="metric-r2" style={{ color: r2Color }}>
                               {(row.r2 * 100).toFixed(1)}%
@@ -418,13 +432,13 @@ export const Predicts: React.FC = () => {
             {modelResults.length > 0 && (
               <div className="charts-visual-grid">
                 <div className="demand-glass-panel chart-box">
-                  <h4>Matriz de Confusión (Heatmap)</h4>
+                  <h4>{t("Matriz de Confusión (Heatmap)")}</h4>
                   <p className="chart-explanation">
-                    Clasificación de la demanda en tres rangos (Baja, Media, Alta). Indica el acierto diagonal del modelo óptimo.
+                    {t("Clasificación de la demanda en tres rangos (Baja, Media, Alta). Indica el acierto diagonal del modelo óptimo.")}
                   </p>
                   <div className="image-wrapper">
                     <img 
-                      src={`http://localhost:8000/static/img/confusion_matrix.png?v=${chartsVersion}`} 
+                      src={`http://localhost:8000/static/img/confusion_matrix${language === "en" ? "_en" : ""}.png?v=${chartsVersion}`} 
                       alt="Matriz de Confusión" 
                       className="real-chart-img"
                     />
@@ -432,13 +446,13 @@ export const Predicts: React.FC = () => {
                 </div>
 
                 <div className="demand-glass-panel chart-box">
-                  <h4>Curvas ROC Comparativas (Macro)</h4>
+                  <h4>{t("Curvas ROC Comparativas (Macro)")}</h4>
                   <p className="chart-explanation">
-                    Comparativa de la tasa de verdaderos positivos contra falsos positivos para cada uno de los 5 modelos (Promedio Macro). Un AUC mayor a 0.8 indica alta especificidad.
+                    {t("Comparativa de la tasa de verdaderos positivos contra falsos positivos para cada uno de los 5 modelos (Promedio Macro). Un AUC mayor a 0.8 indica alta especificidad.")}
                   </p>
                   <div className="image-wrapper">
                     <img 
-                      src={`http://localhost:8000/static/img/roc_curve.png?v=${chartsVersion}`} 
+                      src={`http://localhost:8000/static/img/roc_curve${language === "en" ? "_en" : ""}.png?v=${chartsVersion}`} 
                       alt="Curva ROC" 
                       className="real-chart-img"
                     />
@@ -446,13 +460,13 @@ export const Predicts: React.FC = () => {
                 </div>
 
                 <div className="demand-glass-panel chart-box">
-                  <h4>Comparativa de Métricas (Heatmap)</h4>
+                  <h4>{t("Comparativa de Métricas (Heatmap)")}</h4>
                   <p className="chart-explanation">
-                    Comparación del rendimiento (R², RMSE, MAE, MAPE) de los 5 modelos. El color representa el desempeño relativo (Verde = Mejor, Rojo = Peor).
+                    {t("Comparación del rendimiento (R², RMSE, MAE, MAPE) de los 5 modelos. El color representa el desempeño relativo (Verde = Mejor, Rojo = Peor).")}
                   </p>
                   <div className="image-wrapper">
                     <img 
-                      src={`http://localhost:8000/static/img/heatmap_corr.png?v=${chartsVersion}`} 
+                      src={`http://localhost:8000/static/img/heatmap_corr${language === "en" ? "_en" : ""}.png?v=${chartsVersion}`} 
                       alt="Mapa de Calor Comparativo de Métricas" 
                       className="real-chart-img"
                     />
@@ -468,9 +482,9 @@ export const Predicts: React.FC = () => {
           <div className="tab-pane animate-fade-in">
             <div className="demand-glass-panel">
               <div className="panel-title-row flex-header-between">
-                <h3>Validación Cruzada K-Fold Configurable</h3>
+                <h3>{t("Validación Cruzada K-Fold Configurable")}</h3>
                 <div className="cv-controls">
-                  <label htmlFor="folds-slider">Folds (K): {cvFolds}</label>
+                  <label htmlFor="folds-slider">{isEn ? "Folds" : "Folds (K)"}: {cvFolds}</label>
                   <input 
                     id="folds-slider"
                     type="range" 
@@ -481,39 +495,41 @@ export const Predicts: React.FC = () => {
                     disabled={runningCv}
                   />
                   <button className="op-btn purple mini-btn" onClick={handleRunCrossValidation} disabled={runningCv}>
-                    {runningCv ? "Corriendo..." : "Ejecutar"}
+                    {runningCv ? t("Corriendo...") : t("Ejecutar")}
                   </button>
                 </div>
               </div>
               <p className="panel-subtitle">
-                Evalúa la estabilidad de las redes neuronales y regresores dividiendo los datos en K partes homogéneas.
+                {isEn 
+                  ? "Evaluates predictability stability by partitioning history into K homogeneous subsets."
+                  : "Evalúa la estabilidad de las redes neuronales y regresores dividiendo los datos en K partes homogéneas."}
               </p>
 
               {runningCv ? (
                 <div className="table-loader-wrapper">
                   <div className="spinner"></div>
-                  <span>Corriendo entrenamiento iterativo en K={cvFolds} subconjuntos del historial...</span>
+                  <span>{t("Corriendo entrenamiento iterativo en K={folds} folds...", { folds: cvFolds })}</span>
                 </div>
               ) : cvResults.length === 0 ? (
                 <div className="empty-table-placeholder">
-                  <span>Ajuste el número de folds y pulse "Ejecutar" para visualizar los puntajes promedios.</span>
+                  <span>{t("Ajuste el número de folds y pulse \"Ejecutar\" para visualizar los puntajes promedios.")}</span>
                 </div>
               ) : (
                 <div className="demand-table-container">
                   <table className="demand-custom-table">
                     <thead>
                       <tr>
-                        <th>ALGORITMO</th>
-                        <th>R² PROMEDIO (MEAN)</th>
-                        <th>R² DESVIACIÓN (STD)</th>
-                        <th>RMSE PROMEDIO (MEAN)</th>
-                        <th>RMSE DESVIACIÓN (STD)</th>
+                        <th>{t("ALGORITMO")}</th>
+                        <th>{t("R² PROMEDIO (MEAN)")}</th>
+                        <th>{t("R² DESVIACIÓN (STD)")}</th>
+                        <th>{t("RMSE PROMEDIO (MEAN)")}</th>
+                        <th>{t("RMSE DESVIACIÓN (STD)")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {cvResults.map((row, idx) => (
                         <tr key={idx}>
-                          <td className="product-name-cell">{row.algoritmo}</td>
+                          <td className="product-name-cell">{getTranslatedAlgoName(row.algoritmo)}</td>
                           <td className="font-bold text-green">{(row.r2_mean * 100).toFixed(1)}%</td>
                           <td>{(row.r2_std * 100).toFixed(2)}%</td>
                           <td className="font-bold">{row.rmse_mean.toFixed(3)}</td>
@@ -533,32 +549,34 @@ export const Predicts: React.FC = () => {
           <div className="tab-pane animate-fade-in">
             <div className="demand-glass-panel">
               <div className="panel-title-row">
-                <h3>Sintonía Fina y Búsqueda en Rejilla (GridSearchCV)</h3>
+                <h3>{t("Sintonía Fina y Búsqueda en Rejilla (GridSearchCV)")}</h3>
               </div>
               <p className="panel-subtitle">
-                Ajusta las neuronas de la red MLP y los estimadores del Bosque Aleatorio para maximizar el ajuste R².
+                {t("Ajusta las neuronas de la red MLP y los estimadores del Bosque Aleatorio para maximizar el ajuste R².")}
               </p>
 
               {optimizing ? (
                 <div className="table-loader-wrapper">
                   <div className="spinner"></div>
-                  <span>Realizando GridSearch en el servidor FastAPI...</span>
+                  <span>{t("Realizando GridSearch en el servidor FastAPI...")}</span>
                 </div>
               ) : !tunedParams ? (
                 <div className="empty-table-placeholder">
-                  <span>Pulse "Tuning Hiperparámetros" en las opciones superiores para ver los parámetros optimizados.</span>
+                  <span>{t("Pulse \"Tuning Hiperparámetros\" en las opciones superiores para ver los parámetros optimizados.")}</span>
                 </div>
               ) : (
                 <div className="tuning-results-box">
                   <div className="metrics-summary-alert">
-                    <h4>¡Optimización Completada!</h4>
+                    <h4>{isEn ? "Optimization Complete!" : "¡Optimización Completada!"}</h4>
                     <p>
-                      El tuning de hiperparámetros de las Redes Neuronales reporta un RMSE óptimo estimado de: 
-                      <strong> {tunedParams.best_rmse} unidades</strong>.
+                      {isEn 
+                        ? `Hyperparameters tuning reports an estimated optimal RMSE of: `
+                        : `El tuning de hiperparámetros de las Redes Neuronales reporta un RMSE óptimo estimado de: `}
+                      <strong> {tunedParams.best_rmse} {isEn ? "units" : "unidades"}</strong>.
                     </p>
                   </div>
                   <div className="params-json-render">
-                    <h5>Parámetros Ganadores Seleccionados:</h5>
+                    <h5>{isEn ? "Selected Winning Parameters:" : "Parámetros Ganadores Seleccionados:"}</h5>
                     <pre>{JSON.stringify(tunedParams.best_params, null, 2)}</pre>
                   </div>
                 </div>
@@ -572,47 +590,54 @@ export const Predicts: React.FC = () => {
           <div className="tab-pane animate-fade-in">
             <div className="demand-glass-panel">
               <div className="panel-title-row">
-                <h3>Validación Estadística de Residuos (Pruebas de Hipótesis)</h3>
+                <h3>{t("Pruebas Estadísticas Robustas de Validación")}</h3>
               </div>
               <p className="panel-subtitle">
-                Evalúa si la diferencia entre los errores del modelo ganador y los demás algoritmos es estadísticamente significativa (Alpha=0.05).
+                {t("Evalúa si las diferencias de predicción del modelo óptimo respecto a los demás son estadísticamente significativas (Alpha=0.05).")}
               </p>
 
               {validating ? (
                 <div className="table-loader-wrapper">
                   <div className="spinner"></div>
-                  <span>Calculando p-valores de Wilcoxon y Student-T...</span>
+                  <span>{isEn ? "Calculating Wilcoxon and Student-T p-values..." : "Calculando p-valores de Wilcoxon y Student-T..."}</span>
                 </div>
               ) : statTests.length === 0 ? (
                 <div className="empty-table-placeholder">
-                  <span>No hay análisis de significancia cargado.</span>
+                  <span>{isEn ? "No significance analysis loaded." : "No hay análisis de significancia cargado."}</span>
                 </div>
               ) : (
                 <div className="demand-table-container">
                   <table className="demand-custom-table">
                     <thead>
                       <tr>
-                        <th>MODELO COMPARADO</th>
-                        <th>PRUEBA T DE STUDENT (P-VAL)</th>
-                        <th>PRUEBA WILCOXON (P-VAL)</th>
-                        <th>SIGNIFICATIVO (P &lt; 0.05)</th>
-                        <th>INTERPRETACIÓN CIENTÍFICA</th>
+                        <th>{t("MODELO COMPARADOR")}</th>
+                        <th>{t("T-TEST (P-VALUE)")}</th>
+                        <th>{t("WILCOXON (P-VALUE)")}</th>
+                        <th>{t("SIGNIFICATIVO")}</th>
+                        <th>{t("INTERPRETACIÓN")}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {statTests.map((row, idx) => (
-                        <tr key={idx}>
-                          <td className="product-name-cell">{row.comparador}</td>
-                          <td>{row.t_p_value.toFixed(6)}</td>
-                          <td className="font-bold">{row.wilcoxon_p_value.toFixed(6)}</td>
-                          <td>
-                            <span className={`sig-badge ${row.significativo ? "yes" : "no"}`}>
-                              {row.significativo ? "SÍ" : "NO"}
-                            </span>
-                          </td>
-                          <td className="italic-text">{row.interpretacion}</td>
-                        </tr>
-                      ))}
+                      {statTests.map((row, idx) => {
+                        let interpret = row.interpretacion;
+                        if (isEn) {
+                          const isSig = row.significativo;
+                          interpret = `The model ${bestModelName} is statistically ${isSig ? 'superior and significant' : 'similar'} compared to ${row.comparador} (p=${row.wilcoxon_p_value.toFixed(5)})`;
+                        }
+                        return (
+                          <tr key={idx}>
+                            <td className="product-name-cell">{getTranslatedAlgoName(row.comparador)}</td>
+                            <td>{row.t_p_value.toFixed(6)}</td>
+                            <td className="font-bold">{row.wilcoxon_p_value.toFixed(6)}</td>
+                            <td>
+                              <span className={`sig-badge ${row.significativo ? "yes" : "no"}`}>
+                                {row.significativo ? (isEn ? "YES" : "SÍ") : "NO"}
+                              </span>
+                            </td>
+                            <td className="italic-text">{interpret}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -626,63 +651,63 @@ export const Predicts: React.FC = () => {
           <div className="tab-pane animate-fade-in">
             <div className="demand-glass-panel">
               <div className="panel-title-row">
-                <h3>Análisis Descriptivo Histórico de Demanda (EDA)</h3>
+                <h3>{t("Análisis Exploratorio y Descriptivos (EDA)")}</h3>
               </div>
               
               {loadingEda ? (
                 <div className="table-loader-wrapper">
                   <div className="spinner"></div>
-                  <span>Calculando descriptivos del historial de ventas...</span>
+                  <span>{t("Calculando descriptivos del historial de ventas...")}</span>
                 </div>
               ) : !edaStats ? (
                 <div className="empty-table-placeholder">
-                  <span>No hay datos de EDA disponibles.</span>
+                  <span>{isEn ? "No EDA statistics available." : "No hay datos de EDA disponibles."}</span>
                 </div>
               ) : (
                 <div className="eda-content-wrapper">
                   {/* General KPIs */}
                   <div className="eda-kpis-row">
                     <div className="eda-kpi">
-                      <span className="label">Total Observaciones</span>
-                      <span className="value">{edaStats.count} días</span>
+                      <span className="label">{isEn ? "Total Observations" : "Total Observaciones"}</span>
+                      <span className="value">{edaStats.count} {isEn ? "days" : "días"}</span>
                     </div>
                     <div className="eda-kpi">
-                      <span className="label">Demanda Promedio</span>
-                      <span className="value">{edaStats.mean} uds</span>
+                      <span className="label">{isEn ? "Average Demand" : "Demanda Promedio"}</span>
+                      <span className="value">{edaStats.mean} {isEn ? "units" : "uds"}</span>
                     </div>
                     <div className="eda-kpi">
-                      <span className="label">Volatilidad (StdDev)</span>
-                      <span className="value">{edaStats.std} uds</span>
+                      <span className="label">{isEn ? "Volatility (StdDev)" : "Volatilidad (StdDev)"}</span>
+                      <span className="value">{edaStats.std} {isEn ? "units" : "uds"}</span>
                     </div>
                     <div className="eda-kpi">
-                      <span className="label">Demanda Máxima</span>
-                      <span className="value">{edaStats.max} uds</span>
+                      <span className="label">{isEn ? "Maximum Demand" : "Demanda Máxima"}</span>
+                      <span className="value">{edaStats.max} {isEn ? "units" : "uds"}</span>
                     </div>
                   </div>
 
                   {/* Product stats table */}
                   <div className="eda-table-title">
-                    <h4>Desglose Descriptivo por Producto</h4>
+                    <h4>{isEn ? "Descriptive Breakdown by Product" : "Desglose Descriptivo por Producto"}</h4>
                   </div>
                   <div className="demand-table-container">
                     <table className="demand-custom-table">
                       <thead>
                         <tr>
-                          <th>PRODUCTO</th>
-                          <th>DEMANDA PROMEDIO</th>
-                          <th>DESVIACIÓN ESTÁNDAR</th>
-                          <th>MÍNIMO DIARIO</th>
-                          <th>MÁXIMO DIARIO</th>
+                          <th>{t("PRODUCTO")}</th>
+                          <th>{t("DEMANDA PROMEDIO")}</th>
+                          <th>{t("DESVIACIÓN ESTÁNDAR")}</th>
+                          <th>{isEn ? "DAILY MINIMUM" : "MÍNIMO DIARIO"}</th>
+                          <th>{isEn ? "DAILY MAXIMUM" : "MÁXIMO DIARIO"}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {edaStats.prod_stats.map((row, idx) => (
                           <tr key={idx}>
                             <td className="product-name-cell">{row.nombre}</td>
-                            <td className="font-bold">{row.mean.toFixed(2)} uds</td>
-                            <td>{row.std.toFixed(2)} uds</td>
-                            <td>{row.min} uds</td>
-                            <td className="font-bold text-purple">{row.max} uds</td>
+                            <td className="font-bold">{row.mean.toFixed(2)} {isEn ? "units" : "uds"}</td>
+                            <td>{row.std.toFixed(2)} {isEn ? "units" : "uds"}</td>
+                            <td>{row.min} {isEn ? "units" : "uds"}</td>
+                            <td className="font-bold text-purple">{row.max} {isEn ? "units" : "uds"}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -699,28 +724,28 @@ export const Predicts: React.FC = () => {
       <div className="demand-glass-panel">
         <div className="panel-title-row">
           <TrendingUp size={18} className="text-primary" />
-          <h3>Predicciones de Demanda Sugeridas (Próximos 7 Días)</h3>
+          <h3>{isEn ? "Suggested Demand Predictions (Next 7 Days)" : "Predicciones de Demanda Sugeridas (Próximos 7 Días)"}</h3>
         </div>
 
         {generating ? (
           <div className="table-loader-wrapper">
             <div className="spinner"></div>
-            <span>Generando proyecciones con el modelo óptimo...</span>
+            <span>{isEn ? "Generating forecasts with optimal model..." : "Generando proyecciones con el modelo óptimo..."}</span>
           </div>
         ) : predictions.length === 0 ? (
           <div className="empty-table-placeholder">
-            <span>Presione "Generar Predicciones" para proyectar la demanda.</span>
+            <span>{isEn ? "Press 'Generate Predictions' to forecast demand." : "Presione \"Generar Predicciones\" para proyectar la demanda."}</span>
           </div>
         ) : (
           <div className="demand-table-container scrollable-table">
             <table className="demand-custom-table">
               <thead>
                 <tr>
-                  <th>PRODUCTO</th>
-                  <th>FECHA</th>
-                  <th>DEMANDA SUGERIDA</th>
-                  <th>ALGORITMO PREDICTOR</th>
-                  <th>NIVEL CONFIANZA</th>
+                  <th>{t("PRODUCTO")}</th>
+                  <th>{isEn ? "DATE" : "FECHA"}</th>
+                  <th>{isEn ? "SUGGESTED DEMAND" : "DEMANDA SUGERIDA"}</th>
+                  <th>{isEn ? "PREDICTIVE ALGORITHM" : "ALGORITMO PREDICTOR"}</th>
+                  <th>{isEn ? "CONFIDENCE LEVEL" : "NIVEL CONFIANZA"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -728,8 +753,8 @@ export const Predicts: React.FC = () => {
                   <tr key={idx}>
                     <td className="product-name-cell">{row.nombre}</td>
                     <td className="date-cell">{row.fecha}</td>
-                    <td className="demand-cell">{row.demanda} unidades</td>
-                    <td className="algo-cell">{row.algoritmo}</td>
+                    <td className="demand-cell">{row.demanda} {isEn ? "units" : "unidades"}</td>
+                    <td className="algo-cell">{getTranslatedAlgoName(row.algoritmo)}</td>
                     <td className="confidence-cell">{row.confianza.toFixed(1)}%</td>
                   </tr>
                 ))}
@@ -1052,9 +1077,9 @@ export const Predicts: React.FC = () => {
         .confidence-cell { font-weight: 700; color: var(--accent-success); }
 
         .charts-visual-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-          gap: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 32px;
           margin-top: 24px;
         }
 
@@ -1073,14 +1098,15 @@ export const Predicts: React.FC = () => {
         .image-wrapper {
           background: rgba(0, 0, 0, 0.02);
           border-radius: 8px;
-          padding: 12px;
+          padding: 16px;
           display: flex;
           justify-content: center;
           border: 1px solid var(--card-border);
         }
 
         .real-chart-img {
-          max-width: 100%;
+          width: 100%;
+          max-width: 750px;
           height: auto;
           border-radius: 4px;
         }

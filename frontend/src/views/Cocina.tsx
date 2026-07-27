@@ -2,17 +2,20 @@ import React, { useState, useEffect } from "react";
 import { api, API_BASE } from "../api";
 import type { VentaEncabezado } from "../api";
 import { Flame, CheckCircle2, Clock, RotateCw, FileText, Receipt } from "lucide-react";
+import { useTranslation } from "../LanguageContext";
 
 export const Cocina: React.FC = () => {
   const [ventas, setVentas] = useState<VentaEncabezado[]>([]);
   const [error, setError] = useState("");
+  const { language } = useTranslation();
+  const isEn = language === "en";
 
   const loadCocinaData = async () => {
     try {
       const data = await api.ventas.getAll();
       setVentas(data);
     } catch (err: any) {
-      setError("Error al actualizar comandas");
+      setError(isEn ? "Error updating orders" : "Error al actualizar comandas");
     }
   };
 
@@ -28,7 +31,7 @@ export const Cocina: React.FC = () => {
       await api.ventas.updateCocina(detalleId, nextStatus);
       loadCocinaData();
     } catch (err: any) {
-      alert("No se pudo actualizar el estado de cocina");
+      alert(isEn ? "Could not update kitchen status" : "No se pudo actualizar el estado de cocina");
     }
   };
 
@@ -73,8 +76,12 @@ export const Cocina: React.FC = () => {
     <div className="animate-fade-in view-layout">
       <div className="view-header">
         <div>
-          <h1 className="page-title">Tablero de Cocina</h1>
-          <p className="page-subtitle">Monitoreo en tiempo real de comandas de platos y bebidas (Auto-refresh activo)</p>
+          <h1 className="page-title">{isEn ? "Kitchen Board" : "Tablero de Cocina"}</h1>
+          <p className="page-subtitle">
+            {isEn 
+              ? "Real-time kitchen order monitoring (Auto-refresh active)" 
+              : "Monitoreo en tiempo real de comandas de platos y bebidas (Auto-refresh activo)"}
+          </p>
         </div>
         <button className="btn btn-secondary btn-icon-only" onClick={loadCocinaData}>
           <RotateCw size={18} />
@@ -88,28 +95,28 @@ export const Cocina: React.FC = () => {
         <div className="kanban-column">
           <div className="column-header column-header-pending">
             <Clock size={16} />
-            <h3>🕒 Pendientes ({pendientes.length})</h3>
+            <h3>{isEn ? `🕒 Pending (${pendientes.length})` : `🕒 Pendientes (${pendientes.length})`}</h3>
           </div>
 
           <div className="comandas-list">
             {pendientes.length === 0 ? (
-              <div className="column-empty">Ninguna comanda en cola</div>
+              <div className="column-empty">{isEn ? "No orders in queue" : "Ninguna comanda en cola"}</div>
             ) : (
               pendientes.map(({ venta, detalle }) => (
                 <div key={detalle.detalleId} className="comanda-card glass-panel animate-fade-in">
                   <div className="comanda-card-title">
-                    {detalle.producto ? detalle.producto.nombre : "Producto"}
+                    {detalle.producto ? detalle.producto.nombre : (isEn ? "Product" : "Producto")}
                     <span className="qty-tag">x{detalle.cantidad}</span>
                   </div>
                   <div className="comanda-meta">
-                    <span>📍 Mesa: {venta.mesa ? venta.mesa.numeroMesa : "Llevar"}</span>
+                    <span>📍 {isEn ? "Table" : "Mesa"}: {venta.mesa ? venta.mesa.numeroMesa : (isEn ? "To Go" : "Llevar")}</span>
                     <span>🕒 {formatDate(venta.fechaHora)}</span>
                   </div>
                   <button
                     className="btn btn-primary btn-action"
                     onClick={() => handleUpdateStatus(detalle.detalleId, "preparacion")}
                   >
-                    🧑‍🍳 Iniciar Preparación
+                    🧑‍🍳 {isEn ? "Start Preparation" : "Iniciar Preparación"}
                   </button>
                 </div>
               ))
@@ -121,28 +128,28 @@ export const Cocina: React.FC = () => {
         <div className="kanban-column">
           <div className="column-header column-header-prep">
             <Flame size={16} />
-            <h3>🔥 En Preparación ({enPreparacion.length})</h3>
+            <h3>{isEn ? `🔥 In Preparation (${enPreparacion.length})` : `🔥 En Preparación (${enPreparacion.length})`}</h3>
           </div>
 
           <div className="comandas-list">
             {enPreparacion.length === 0 ? (
-              <div className="column-empty">Ningún plato en preparación</div>
+              <div className="column-empty">{isEn ? "No dishes in preparation" : "Ningún plato en preparación"}</div>
             ) : (
               enPreparacion.map(({ venta, detalle }) => (
                 <div key={detalle.detalleId} className="comanda-card glass-panel card-active animate-fade-in">
                   <div className="comanda-card-title">
-                    {detalle.producto ? detalle.producto.nombre : "Producto"}
+                    {detalle.producto ? detalle.producto.nombre : (isEn ? "Product" : "Producto")}
                     <span className="qty-tag">x{detalle.cantidad}</span>
                   </div>
                   <div className="comanda-meta">
-                    <span>📍 Mesa: {venta.mesa ? venta.mesa.numeroMesa : "Llevar"}</span>
+                    <span>📍 {isEn ? "Table" : "Mesa"}: {venta.mesa ? venta.mesa.numeroMesa : (isEn ? "To Go" : "Llevar")}</span>
                     <span>🕒 {formatDate(venta.fechaHora)}</span>
                   </div>
                   <button
                     className="btn btn-success btn-action"
                     onClick={() => handleUpdateStatus(detalle.detalleId, "listo")}
                   >
-                    ✅ Listo para Servir
+                    ✅ {isEn ? "Ready to Serve" : "Listo para Servir"}
                   </button>
                 </div>
               ))
@@ -154,20 +161,20 @@ export const Cocina: React.FC = () => {
         <div className="kanban-column">
           <div className="column-header column-header-ready">
             <CheckCircle2 size={16} />
-            <h3>✅ Listos / Tickets ({listosPorVenta.length})</h3>
+            <h3>{isEn ? `✅ Ready / Tickets (${listosPorVenta.length})` : `✅ Listos / Tickets (${listosPorVenta.length})`}</h3>
           </div>
 
           <div className="comandas-list">
             {listosPorVenta.length === 0 ? (
-              <div className="column-empty">No hay órdenes listas</div>
+              <div className="column-empty">{isEn ? "No ready orders" : "No hay órdenes listas"}</div>
             ) : (
               listosPorVenta.map((v) => (
                 <div key={v.ventaId} className="comanda-card glass-panel card-finished animate-fade-in">
                   <div className="comanda-card-title text-success">
-                    Pedido Nro: {v.ventaId}
+                    {isEn ? "Order No" : "Pedido Nro"}: {v.ventaId}
                   </div>
                   <div className="comanda-meta">
-                    <span>📍 Mesa: {v.mesa ? v.mesa.numeroMesa : "Llevar"}</span>
+                    <span>📍 {isEn ? "Table" : "Mesa"}: {v.mesa ? v.mesa.numeroMesa : (isEn ? "To Go" : "Llevar")}</span>
                     <span>🕒 {formatDate(v.fechaHora)}</span>
                     <span className="text-white font-bold">Total: ${v.totalFinal.toFixed(2)}</span>
                   </div>
@@ -177,14 +184,14 @@ export const Cocina: React.FC = () => {
                       onClick={() => handleDownloadPdf(v.ventaId, "ticket")}
                     >
                       <Receipt size={14} />
-                      Ticket
+                      {isEn ? "Ticket" : "Ticket"}
                     </button>
                     <button
                       className="btn btn-secondary btn-pdf"
                       onClick={() => handleDownloadPdf(v.ventaId, "factura")}
                     >
                       <FileText size={14} />
-                      Factura
+                      {isEn ? "Invoice" : "Factura"}
                     </button>
                   </div>
                 </div>

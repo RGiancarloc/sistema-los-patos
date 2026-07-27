@@ -9,6 +9,7 @@ import {
   RefreshCcw, 
   TrendingUp 
 } from "lucide-react";
+import { useTranslation } from "../LanguageContext";
 
 interface DashboardProps {
   usuario: Usuario;
@@ -21,6 +22,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
   const [forecastSummary, setForecastSummary] = useState<string>("Cargando...");
   const [bestModelName, setBestModelName] = useState<string>("Stacking Hybrid");
   
+  const { t, language } = useTranslation();
+  const isEn = language === "en";
+
   const loadKpis = async () => {
     try {
       // Get general KPIs for the current year
@@ -34,38 +38,38 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
 
   const loadForecast = async () => {
     try {
-      const response = await fetch("http://localhost:8000/api/predicts/forecast");
+      const response = await fetch(`http://localhost:8000/api/predicts/forecast?lang=${language}`);
       if (response.ok) {
         const data = await response.json();
         if (data && data.length > 0) {
           // Summarize total forecasted demand
           const totalDemand = data.reduce((sum: number, item: any) => sum + item.demanda, 0);
-          setForecastSummary(`${totalDemand} platos (Próximos 7 días)`);
+          setForecastSummary(isEn ? `${totalDemand} dishes (Next 7 days)` : `${totalDemand} platos (Próximos 7 días)`);
           setBestModelName(data[0].algoritmo || "Stacking Hybrid");
         } else {
-          setForecastSummary("Sin proyecciones");
+          setForecastSummary(isEn ? "No forecasts" : "Sin proyecciones");
         }
       } else {
-        setForecastSummary("No entrenado");
+        setForecastSummary(isEn ? "Not trained" : "No entrenado");
       }
     } catch (e) {
-      setForecastSummary("Sin conexión");
+      setForecastSummary(isEn ? "No connection" : "Sin conexión");
     }
   };
 
   useEffect(() => {
     loadKpis();
     loadForecast();
-  }, []);
+  }, [language]);
 
   const handleSyncDW = async () => {
     setSyncing(true);
     try {
       await api.analitica.sync();
       await loadKpis();
-      alert("¡Data Warehouse sincronizado con éxito!");
+      alert(isEn ? "Data Warehouse synchronized successfully!" : "¡Data Warehouse sincronizado con éxito!");
     } catch (e) {
-      alert("Error al sincronizar el Data Warehouse");
+      alert(isEn ? "Error synchronizing Data Warehouse" : "Error al sincronizar el Data Warehouse");
     } finally {
       setSyncing(false);
     }
@@ -74,17 +78,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
   // Default values if data not loaded
   const totalIngresos = kpis?.total_ingresos || 4520.50;
   const totalPlatos = kpis?.total_platos || 154;
-  const popularCategory = kpis?.ventas_por_categoria?.[0]?.categoria || "Platos Principales";
+  const popularCategory = kpis?.ventas_por_categoria?.[0]?.categoria || (isEn ? "Main Dishes" : "Platos Principales");
   
   // Custom SVG Area Chart Data (Weekly Sales Trend)
   const salesHistory = [
-    { label: "Lun", val: 320 },
-    { label: "Mar", val: 450 },
-    { label: "Mie", val: 390 },
-    { label: "Jue", val: 680 },
-    { label: "Vie", val: 1200 },
-    { label: "Sab", val: 1450 },
-    { label: "Dom", val: 980 }
+    { label: isEn ? "Mon" : "Lun", val: 320 },
+    { label: isEn ? "Tue" : "Mar", val: 450 },
+    { label: isEn ? "Wed" : "Mie", val: 390 },
+    { label: isEn ? "Thu" : "Jue", val: 680 },
+    { label: isEn ? "Fri" : "Vie", val: 1200 },
+    { label: isEn ? "Sat" : "Sab", val: 1450 },
+    { label: isEn ? "Sun" : "Dom", val: 980 }
   ];
 
   const maxVal = Math.max(...salesHistory.map(d => d.val));
@@ -101,10 +105,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
       {/* Top Banner Header */}
       <div className="db-banner glass-panel animate-fade-in">
         <div className="banner-left">
-          <h2>¡Bienvenido de nuevo, {usuario.nombre || "Usuario"}!</h2>
+          <h2>{isEn ? `Welcome back, ${usuario.nombre || "User"}!` : `¡Bienvenido de nuevo, ${usuario.nombre || "Usuario"}!`}</h2>
           <p>
-            El sistema se encuentra en línea. El DW se encuentra al día y el modelo de predicción
-            de demanda <strong>{bestModelName}</strong> está listo para consulta.
+            {isEn 
+              ? `The system is online. The DW is up to date and the demand prediction model ${bestModelName} is ready for queries.`
+              : `El sistema se encuentra en línea. El DW se encuentra al día y el modelo de predicción de demanda ${bestModelName} está listo para consulta.`}
           </p>
         </div>
         <button 
@@ -113,7 +118,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
           disabled={syncing}
         >
           <RefreshCcw size={16} className={syncing ? "animate-spin" : ""} />
-          {syncing ? "Sincronizando..." : "Sincronizar DW"}
+          {syncing ? t("Sincronizando...") : t("Sincronizar DW")}
         </button>
       </div>
 
@@ -124,9 +129,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
             <DollarSign size={24} />
           </div>
           <div className="kpi-info">
-            <span className="kpi-label">Ingresos Anuales</span>
+            <span className="kpi-label">{isEn ? "Annual Revenue" : "Ingresos Anuales"}</span>
             <h3 className="kpi-value">${totalIngresos.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-            <span className="kpi-trend positive">+12.4% vs año anterior</span>
+            <span className="kpi-trend positive">{isEn ? "+12.4% vs last year" : "+12.4% vs año anterior"}</span>
           </div>
         </div>
 
@@ -135,9 +140,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
             <ShoppingCart size={24} />
           </div>
           <div className="kpi-info">
-            <span className="kpi-label">Platos Vendidos</span>
-            <h3 className="kpi-value">{totalPlatos} unidades</h3>
-            <span className="kpi-trend positive">+8.2% este mes</span>
+            <span className="kpi-label">{isEn ? "Dishes Sold" : "Platos Vendidos"}</span>
+            <h3 className="kpi-value">{totalPlatos} {isEn ? "units" : "unidades"}</h3>
+            <span className="kpi-trend positive">{isEn ? "+8.2% this month" : "+8.2% este mes"}</span>
           </div>
         </div>
 
@@ -146,9 +151,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
             <Utensils size={24} />
           </div>
           <div className="kpi-info">
-            <span className="kpi-label">Categoría Líder</span>
+            <span className="kpi-label">{isEn ? "Leading Category" : "Categoría Líder"}</span>
             <h3 className="kpi-value">{popularCategory}</h3>
-            <span className="kpi-trend neutral">Mayor rentabilidad</span>
+            <span className="kpi-trend neutral">{isEn ? "Highest profitability" : "Mayor rentabilidad"}</span>
           </div>
         </div>
 
@@ -157,7 +162,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
             <TrendingUp size={24} />
           </div>
           <div className="kpi-info">
-            <span className="kpi-label">Previsión Semanal</span>
+            <span className="kpi-label">{isEn ? "Weekly Forecast" : "Previsión Semanal"}</span>
             <h3 className="kpi-value">{forecastSummary}</h3>
             <span className="kpi-trend ml-badge">Model: {bestModelName.substring(0, 15)}</span>
           </div>
@@ -169,8 +174,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
         {/* Weekly Trend Chart (SVG) */}
         <div className="chart-panel glass-panel animate-fade-in" style={{ animationDelay: "0.5s" }}>
           <div className="panel-header">
-            <h3>Tendencia Semanal de Ventas (Ingresos)</h3>
-            <span className="chart-subtitle">Histórico de facturación diaria</span>
+            <h3>{isEn ? "Weekly Sales Trend (Revenue)" : "Tendencia Semanal de Ventas (Ingresos)"}</h3>
+            <span className="chart-subtitle">{isEn ? "Daily billing history" : "Historial de facturación diaria"}</span>
           </div>
           <div className="svg-chart-container">
             <svg viewBox="0 0 600 240" className="area-chart-svg">
@@ -215,8 +220,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
 
         {/* Quick Operations Sidebar */}
         <div className="actions-panel glass-panel animate-fade-in" style={{ animationDelay: "0.6s" }}>
-          <h3>Acceso Rápido</h3>
-          <p className="panel-desc">Flujos y tareas recurrentes de administración.</p>
+          <h3>{isEn ? "Quick Access" : "Acceso Rápido"}</h3>
+          <p className="panel-desc">{isEn ? "Recurrent administrative workflows and tasks." : "Flujos y tareas recurrentes de administración."}</p>
           
           <div className="quick-actions-list">
             <button className="action-row-btn" onClick={() => setVistaActual("ventas")}>
@@ -224,8 +229,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
                 <ShoppingCart size={18} />
               </div>
               <div className="action-text">
-                <h4>Registrar Venta (POS)</h4>
-                <span>Abrir terminal de facturación rápida</span>
+                <h4>{isEn ? "Register Sale (POS)" : "Registrar Venta (POS)"}</h4>
+                <span>{isEn ? "Open rapid billing terminal" : "Abrir terminal de facturación rápida"}</span>
               </div>
             </button>
 
@@ -234,8 +239,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
                 <Flame size={18} />
               </div>
               <div className="action-text">
-                <h4>Monitor de Cocina</h4>
-                <span>Ver pedidos entrantes y estados de preparación</span>
+                <h4>{isEn ? "Kitchen Monitor" : "Monitor de Cocina"}</h4>
+                <span>{isEn ? "View incoming orders and preparation status" : "Ver pedidos entrantes y estados de preparación"}</span>
               </div>
             </button>
 
@@ -244,8 +249,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
                 <TrendingUp size={18} />
               </div>
               <div className="action-text">
-                <h4>Predicciones de Venta (ML)</h4>
-                <span>Entrenar modelos, ver ROC, y exportar reportes</span>
+                <h4>{isEn ? "Sales Predictions (ML)" : "Predicciones de Venta (ML)"}</h4>
+                <span>{isEn ? "Train models, view ROC, and export reports" : "Entrenar modelos, ver ROC, y exportar reportes"}</span>
               </div>
             </button>
 
@@ -254,8 +259,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
                 <Zap size={18} />
               </div>
               <div className="action-text">
-                <h4>Optimizar Rendimiento</h4>
-                <span>Recalcular dimensiones de Data Warehouse</span>
+                <h4>{isEn ? "Optimize Performance" : "Optimizar Rendimiento"}</h4>
+                <span>{isEn ? "Recalculate Data Warehouse dimensions" : "Recalcular dimensiones de Data Warehouse"}</span>
               </div>
             </button>
           </div>

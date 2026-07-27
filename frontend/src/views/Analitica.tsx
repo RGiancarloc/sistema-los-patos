@@ -2,16 +2,19 @@ import React, { useState, useEffect } from "react";
 import { api } from "../api";
 import type { KpisResponse } from "../api";
 import { BarChart3, Calendar, RefreshCcw, FileDown, TrendingUp, Pizza, DollarSign } from "lucide-react";
+import { useTranslation } from "../LanguageContext";
 
 interface DonutChartProps {
   data: { label: string; value: number }[];
 }
 
 const DonutChart: React.FC<DonutChartProps> = ({ data }) => {
+  const { language } = useTranslation();
+  const isEn = language === "en";
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
   if (total === 0 || data.length === 0) {
-    return <div className="no-chart-data">Sin datos de ventas para este año.</div>;
+    return <div className="no-chart-data">{isEn ? "No sales data for this year." : "Sin datos de ventas para este año."}</div>;
   }
 
   const colors = [
@@ -54,7 +57,7 @@ const DonutChart: React.FC<DonutChartProps> = ({ data }) => {
             );
           })}
           <g className="donut-text">
-            <text x="50" y="47" className="donut-total-title">Total Año</text>
+            <text x="50" y="47" className="donut-total-title">{isEn ? "Year Total" : "Total Año"}</text>
             <text x="50" y="58" className="donut-total-val">${total.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</text>
           </g>
         </svg>
@@ -77,6 +80,8 @@ const DonutChart: React.FC<DonutChartProps> = ({ data }) => {
 };
 
 export const Analitica: React.FC = () => {
+  const { language } = useTranslation();
+  const isEn = language === "en";
   const [filters, setFilters] = useState<{ years: number[]; months: string[] }>({ years: [], months: [] });
   const [selectedYear, setSelectedYear] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
@@ -100,7 +105,7 @@ export const Analitica: React.FC = () => {
       const data = await api.analitica.getFiltros();
       setFilters(data);
     } catch (err) {
-      console.error("No se pudieron cargar los filtros de analítica");
+      console.error(isEn ? "Could not load analytics filters" : "No se pudieron cargar los filtros de analítica");
     }
   };
 
@@ -113,7 +118,7 @@ export const Analitica: React.FC = () => {
       const data = await api.analitica.getKpis(y, m);
       setKpis(data);
     } catch (err: any) {
-      setError("Error al cargar KPIs analíticos. Intente sincronizar el Data Warehouse.");
+      setError(isEn ? "Error loading analytical KPIs. Try syncing the Data Warehouse." : "Error al cargar KPIs analíticos. Intente sincronizar el Data Warehouse.");
     } finally {
       setLoading(false);
     }
@@ -141,7 +146,7 @@ export const Analitica: React.FC = () => {
         const data = await api.analitica.getKpis(parseInt(chartYear), undefined);
         setChartData(data.ventas_por_mes || []);
       } catch (err) {
-        console.error("Error al cargar ventas mensuales para el gráfico circular", err);
+        console.error(isEn ? "Error loading monthly sales for circular chart" : "Error al cargar ventas mensuales para el gráfico circular", err);
       } finally {
         setChartLoading(false);
       }
@@ -163,7 +168,7 @@ export const Analitica: React.FC = () => {
         const data = await api.analitica.getKpis(parseInt(categoryYear), undefined);
         setCategoryChartData(data.ventas_por_categoria || []);
       } catch (err) {
-        console.error("Error al cargar ventas por categoría para el gráfico circular", err);
+        console.error(isEn ? "Error loading category sales for circular chart" : "Error al cargar ventas por categoría para el gráfico circular", err);
       } finally {
         setCategoryLoading(false);
       }
@@ -177,27 +182,28 @@ export const Analitica: React.FC = () => {
     setError("");
     try {
       const res = await api.analitica.sync();
-      setMessage(res.message || "¡Sincronización de Data Warehouse exitosa!");
+      setMessage(res.message || (isEn ? "Data Warehouse synchronization successful!" : "¡Sincronización de Data Warehouse exitosa!"));
       loadFilters();
       loadKpis();
     } catch (err: any) {
-      setError(err.message || "Error al sincronizar el Data Warehouse");
+      setError(err.message || (isEn ? "Error syncing Data Warehouse" : "Error al sincronizar el Data Warehouse"));
     } finally {
       setSyncing(false);
     }
   };
 
   const handleDownloadPdf = () => {
-    let params = [];
+    const langParam = isEn ? "lang=en" : "lang=es";
+    let params = [langParam];
     if (selectedYear) params.push(`year=${selectedYear}`);
     if (selectedMonth) params.push(`month=${encodeURIComponent(selectedMonth)}`);
-    const query = params.length ? `?${params.join("&")}` : "";
+    const query = `?${params.join("&")}`;
     window.open(`http://${window.location.hostname}:8000/api/analitica/reporte_pdf${query}`, "_blank");
   };
 
   const drawChart = (data: { label: string; value: number }[]) => {
     if (!data || data.length === 0) {
-      return <div className="no-chart-data">Sin datos disponibles.</div>;
+      return <div className="no-chart-data">{isEn ? "No data available." : "Sin datos disponibles."}</div>;
     }
 
     const maxVal = Math.max(...data.map((d) => d.value), 1);
@@ -231,7 +237,7 @@ export const Analitica: React.FC = () => {
 
   const drawLineChart = (data: { label: string; value: number }[]) => {
     if (!data || data.length === 0) {
-      return <div className="no-chart-data">Sin datos de ventas disponibles.</div>;
+      return <div className="no-chart-data">{isEn ? "No sales data available." : "Sin datos de ventas disponibles."}</div>;
     }
 
     const chartWidth = 800;
@@ -377,17 +383,21 @@ export const Analitica: React.FC = () => {
     <div className="animate-fade-in view-layout">
       <div className="view-header">
         <div>
-          <h1 className="page-title">Executive Analytics</h1>
-          <p className="page-subtitle">Inteligencia de Negocios y análisis OLAP del restaurante Los Patos</p>
+          <h1 className="page-title">{isEn ? "BI & KPI Analytics" : "Analítica Ejecutiva"}</h1>
+          <p className="page-subtitle">
+            {isEn 
+              ? "Business Intelligence and OLAP analysis of Los Patos restaurant" 
+              : "Inteligencia de Negocios y análisis OLAP del restaurante Los Patos"}
+          </p>
         </div>
         <div className="view-actions">
           <button className="btn btn-secondary" onClick={handleSync} disabled={syncing}>
             <RefreshCcw size={16} className={syncing ? "animate-spin" : ""} />
-            {syncing ? "Sincronizando..." : "Sincronizar DW"}
+            {syncing ? (isEn ? "Syncing..." : "Sincronizando...") : (isEn ? "Sync DW" : "Sincronizar DW")}
           </button>
           <button className="btn btn-primary" onClick={handleDownloadPdf} disabled={loading || !kpis}>
             <FileDown size={16} />
-            Descargar Reporte PDF
+            {isEn ? "Download PDF Report" : "Descargar Reporte PDF"}
           </button>
         </div>
       </div>
@@ -399,17 +409,17 @@ export const Analitica: React.FC = () => {
       <div className="filter-panel glass-panel">
         <div className="filter-title">
           <Calendar size={16} className="text-primary" />
-          <span>Filtros Temporales</span>
+          <span>{isEn ? "Temporal Filters" : "Filtros Temporales"}</span>
         </div>
         <div className="filter-selectors">
           <div className="form-group flex-row">
-            <label className="form-label inline-label">Año:</label>
+            <label className="form-label inline-label">{isEn ? "Year:" : "Año:"}</label>
             <select
               className="input-field select-field select-filter"
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
             >
-              <option value="">Todos los Años</option>
+              <option value="">{isEn ? "All Years" : "Todos los Años"}</option>
               {filters.years.map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
@@ -417,15 +427,28 @@ export const Analitica: React.FC = () => {
           </div>
 
           <div className="form-group flex-row">
-            <label className="form-label inline-label">Mes:</label>
+            <label className="form-label inline-label">{isEn ? "Month:" : "Mes:"}</label>
             <select
               className="input-field select-field select-filter"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
             >
-              <option value="">Todos los Meses</option>
+              <option value="">{isEn ? "All Months" : "Todos los Meses"}</option>
               {filters.months.map((m) => (
-                <option key={m} value={m}>{m}</option>
+                <option key={m} value={m}>
+                  {isEn && m === "Enero" ? "January" :
+                   isEn && m === "Febrero" ? "February" :
+                   isEn && m === "Marzo" ? "March" :
+                   isEn && m === "Abril" ? "April" :
+                   isEn && m === "Mayo" ? "May" :
+                   isEn && m === "Junio" ? "June" :
+                   isEn && m === "Julio" ? "July" :
+                   isEn && m === "Agosto" ? "August" :
+                   isEn && m === "Septiembre" ? "September" :
+                   isEn && m === "Octubre" ? "October" :
+                   isEn && m === "Noviembre" ? "November" :
+                   isEn && m === "Diciembre" ? "December" : m}
+                </option>
               ))}
             </select>
           </div>
@@ -435,13 +458,13 @@ export const Analitica: React.FC = () => {
       {loading ? (
         <div className="loading-container">
           <div className="spinner"></div>
-          <span>Cargando reportes OLAP...</span>
+          <span>{isEn ? "Loading OLAP reports..." : "Cargando reportes OLAP..."}</span>
         </div>
       ) : !kpis ? (
         <div className="empty-container glass-panel">
           <BarChart3 size={48} className="empty-icon" />
-          <h3>No hay datos en el Data Warehouse</h3>
-          <p>Por favor sincronice el Data Warehouse para construir las dimensiones y hechos analíticos.</p>
+          <h3>{isEn ? "No data in the Data Warehouse" : "No hay datos en el Data Warehouse"}</h3>
+          <p>{isEn ? "Please sync the Data Warehouse to build the analytical dimensions and facts." : "Por favor sincronice el Data Warehouse para construir las dimensiones y hechos analíticos."}</p>
         </div>
       ) : (
         <>
@@ -452,10 +475,10 @@ export const Analitica: React.FC = () => {
                 <DollarSign size={24} />
               </div>
               <div className="kpi-info">
-                <span className="kpi-title">Ingresos Totales (DW)</span>
+                <span className="kpi-title">{isEn ? "Total Revenue (DW)" : "Ingresos Totales (DW)"}</span>
                 <span className="kpi-value">${kpis.total_ingresos.toFixed(2)}</span>
                 <span className="kpi-meta text-success">
-                  <TrendingUp size={12} style={{ marginRight: 4 }} /> +12.4% vs mes anterior
+                  <TrendingUp size={12} style={{ marginRight: 4 }} /> {isEn ? "+12.4% vs last month" : "+12.4% vs mes anterior"}
                 </span>
               </div>
             </div>
@@ -465,9 +488,9 @@ export const Analitica: React.FC = () => {
                 <Pizza size={24} />
               </div>
               <div className="kpi-info">
-                <span className="kpi-title">Platos Vendidos (DW)</span>
+                <span className="kpi-title">{isEn ? "Dishes Sold (DW)" : "Platos Vendidos (DW)"}</span>
                 <span className="kpi-value">{kpis.total_platos}</span>
-                <span className="kpi-meta">Unidades registradas en el periodo</span>
+                <span className="kpi-meta">{isEn ? "Units registered in the period" : "Unidades registradas en el periodo"}</span>
               </div>
             </div>
           </div>
@@ -478,33 +501,64 @@ export const Analitica: React.FC = () => {
             const hasMonth = !!selectedMonth;
             
             let chartDataPoints: { label: string; value: number }[] = [];
-            let chartSubtitle = "Evolución mensual consolidada";
+            let chartSubtitle = isEn ? "Consolidated monthly evolution" : "Evolución mensual consolidada";
             
             if (hasYear && hasMonth) {
               chartDataPoints = (kpis.ventas_por_dia || []).map((item) => ({
                 label: `${item.dia}`,
                 value: item.total,
               }));
-              chartSubtitle = `Ventas diarias de ${selectedMonth} de ${selectedYear}`;
+              let displayMonth = selectedMonth;
+              if (isEn) {
+                const monthMap: Record<string, string> = {
+                  Enero: "January", Febrero: "February", Marzo: "March", Abril: "April",
+                  Mayo: "May", Junio: "June", Julio: "July", Agosto: "August",
+                  Septiembre: "September", Octubre: "October", Noviembre: "November", Diciembre: "December"
+                };
+                displayMonth = monthMap[selectedMonth] || selectedMonth;
+              }
+              chartSubtitle = isEn ? `Daily sales of ${displayMonth} ${selectedYear}` : `Ventas diarias de ${selectedMonth} de ${selectedYear}`;
             } else if (hasYear) {
               chartDataPoints = kpis.ventas_por_mes.map((item) => ({
-                label: item.mes,
+                label: isEn && item.mes === "Enero" ? "Jan" :
+                       isEn && item.mes === "Febrero" ? "Feb" :
+                       isEn && item.mes === "Marzo" ? "Mar" :
+                       isEn && item.mes === "Abril" ? "Apr" :
+                       isEn && item.mes === "Mayo" ? "May" :
+                       isEn && item.mes === "Junio" ? "Jun" :
+                       isEn && item.mes === "Julio" ? "Jul" :
+                       isEn && item.mes === "Agosto" ? "Aug" :
+                       isEn && item.mes === "Septiembre" ? "Sep" :
+                       isEn && item.mes === "Octubre" ? "Oct" :
+                       isEn && item.mes === "Noviembre" ? "Nov" :
+                       isEn && item.mes === "Diciembre" ? "Dec" : item.mes,
                 value: item.total,
               }));
-              chartSubtitle = `Ventas mensuales del año ${selectedYear}`;
+              chartSubtitle = isEn ? `Monthly sales of year ${selectedYear}` : `Ventas mensuales del año ${selectedYear}`;
             } else {
               if (kpis.ventas_por_anio && kpis.ventas_por_anio.length > 0) {
                 chartDataPoints = kpis.ventas_por_anio.map((item) => ({
                   label: `${item.anio}`,
                   value: item.total,
                 }));
-                chartSubtitle = "Ventas anuales consolidadas";
+                chartSubtitle = isEn ? "Consolidated annual sales" : "Ventas anuales consolidadas";
               } else {
                 chartDataPoints = kpis.ventas_por_mes.map((item) => ({
-                  label: item.mes,
+                  label: isEn && item.mes === "Enero" ? "Jan" :
+                         isEn && item.mes === "Febrero" ? "Feb" :
+                         isEn && item.mes === "Marzo" ? "Mar" :
+                         isEn && item.mes === "Abril" ? "Apr" :
+                         isEn && item.mes === "Mayo" ? "May" :
+                         isEn && item.mes === "Junio" ? "Jun" :
+                         isEn && item.mes === "Julio" ? "Jul" :
+                         isEn && item.mes === "Agosto" ? "Aug" :
+                         isEn && item.mes === "Septiembre" ? "Sep" :
+                         isEn && item.mes === "Octubre" ? "Oct" :
+                         isEn && item.mes === "Noviembre" ? "Nov" :
+                         isEn && item.mes === "Diciembre" ? "Dec" : item.mes,
                   value: item.total,
                 }));
-                chartSubtitle = "Evolución mensual consolidada";
+                chartSubtitle = isEn ? "Consolidated monthly evolution" : "Evolución mensual consolidada";
               }
             }
 
@@ -513,7 +567,7 @@ export const Analitica: React.FC = () => {
                 <div className="chart-header flex-header">
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <TrendingUp size={20} className="text-primary" />
-                    <h3 style={{ margin: 0 }}>Histórico de Ventas en General</h3>
+                    <h3 style={{ margin: 0 }}>{isEn ? "Historical Sales Trend" : "Histórico de Ventas en General"}</h3>
                   </div>
                   <span className="text-muted text-sm font-medium" style={{ fontSize: "0.85rem" }}>
                     {chartSubtitle}
@@ -528,9 +582,9 @@ export const Analitica: React.FC = () => {
           <div className="charts-grid">
             <div className="glass-panel chart-card">
               <div className="chart-header flex-header">
-                <h3>Ventas por Categoría</h3>
+                <h3>{isEn ? "Revenue by Category" : "Ventas por Categoría"}</h3>
                 <div className="chart-selector-wrapper">
-                  <label className="chart-select-label">Año:</label>
+                  <label className="chart-select-label">{isEn ? "Year:" : "Año:"}</label>
                   <select
                     className="input-field select-field chart-select-input"
                     value={categoryYear}
@@ -546,19 +600,22 @@ export const Analitica: React.FC = () => {
               {categoryLoading ? (
                 <div className="chart-sub-loader">
                   <div className="spinner-sm"></div>
-                  <span>Cargando gráfico...</span>
+                  <span>{isEn ? "Loading chart..." : "Cargando gráfico..."}</span>
                 </div>
               ) : (
-                <DonutChart data={categoryChartData.map(d => ({ label: d.categoria, value: d.total }))} />
+                <DonutChart data={categoryChartData.map(d => ({ 
+                  label: isEn && d.categoria === "Bebidas" ? "Drinks" : isEn && d.categoria === "Entradas" ? "Starters" : isEn && d.categoria === "Platos Principales" ? "Main Dishes" : isEn && d.categoria === "Postres" ? "Desserts" : d.categoria, 
+                  value: d.total 
+                }))} />
               )}
             </div>
 
             {/* Circular Chart: Ventas por Mes */}
             <div className="glass-panel chart-card">
               <div className="chart-header flex-header">
-                <h3>Distribución de Ventas por Mes</h3>
+                <h3>{isEn ? "Sales Distribution by Month" : "Distribución de Ventas por Mes"}</h3>
                 <div className="chart-selector-wrapper">
-                  <label className="chart-select-label">Año:</label>
+                  <label className="chart-select-label">{isEn ? "Year:" : "Año:"}</label>
                   <select
                     className="input-field select-field chart-select-input"
                     value={chartYear}
@@ -574,26 +631,40 @@ export const Analitica: React.FC = () => {
               {chartLoading ? (
                 <div className="chart-sub-loader">
                   <div className="spinner-sm"></div>
-                  <span>Cargando gráfico...</span>
+                  <span>{isEn ? "Loading chart..." : "Cargando gráfico..."}</span>
                 </div>
               ) : (
-                <DonutChart data={chartData.map(d => ({ label: d.mes, value: d.total }))} />
+                <DonutChart data={chartData.map(d => ({ 
+                  label: isEn && d.mes === "Enero" ? "January" :
+                         isEn && d.mes === "Febrero" ? "February" :
+                         isEn && d.mes === "Marzo" ? "March" :
+                         isEn && d.mes === "Abril" ? "April" :
+                         isEn && d.mes === "Mayo" ? "May" :
+                         isEn && d.mes === "Junio" ? "June" :
+                         isEn && d.mes === "Julio" ? "July" :
+                         isEn && d.mes === "Agosto" ? "August" :
+                         isEn && d.mes === "Septiembre" ? "September" :
+                         isEn && d.mes === "Octubre" ? "October" :
+                         isEn && d.mes === "Noviembre" ? "November" :
+                         isEn && d.mes === "Diciembre" ? "December" : d.mes, 
+                  value: d.total 
+                }))} />
               )}
             </div>
           </div>
 
           <div className="glass-panel chart-card full-width-chart">
             <div className="chart-header">
-              <h3>Platos Más Vendidos (Top Productos)</h3>
+              <h3>{isEn ? "Most Sold Dishes (Top Products)" : "Platos Más Vendidos (Top Productos)"}</h3>
             </div>
             <div className="table-responsive">
               <table className="top-products-table">
                 <thead>
                   <tr>
-                    <th style={{ width: "80px" }}>Puesto</th>
-                    <th>Producto / Plato</th>
-                    <th>Ventas Totales</th>
-                    <th>Participación de Mercado</th>
+                    <th style={{ width: "80px" }}>{isEn ? "Rank" : "Puesto"}</th>
+                    <th>{isEn ? "Product / Dish" : "Producto / Plato"}</th>
+                    <th>{isEn ? "Total Sales" : "Ventas Totales"}</th>
+                    <th>{isEn ? "Market Share" : "Participación de Mercado"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -629,7 +700,7 @@ export const Analitica: React.FC = () => {
 
           <div className="glass-panel chart-card full-width-chart">
             <div className="chart-header">
-              <h3>Rendimiento de Meseros</h3>
+              <h3>{isEn ? "Waiter Performance" : "Rendimiento de Meseros"}</h3>
             </div>
             {drawChart(
               kpis.ventas_por_empleado.map((item) => ({
@@ -641,14 +712,14 @@ export const Analitica: React.FC = () => {
 
           <div className="glass-panel chart-card full-width-chart">
             <div className="chart-header">
-              <h3>Mejores Clientes</h3>
+              <h3>{isEn ? "Top Customers" : "Mejores Clientes"}</h3>
             </div>
             {drawChart(
               [...(kpis.ventas_por_cliente || [])]
                 .sort((a, b) => b.total - a.total)
                 .slice(0, 5)
                 .map((item) => ({
-                  label: item.cliente,
+                  label: item.cliente === "Consumidor Final" && isEn ? "Final Consumer" : item.cliente,
                   value: item.total,
                 }))
             )}

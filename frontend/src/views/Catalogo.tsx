@@ -2,12 +2,15 @@ import React, { useState, useEffect } from "react";
 import { api } from "../api";
 import type { Producto, Proveedor } from "../api";
 import { Plus, Trash2, Package, Pencil } from "lucide-react";
+import { useTranslation } from "../LanguageContext";
 
 export const Catalogo: React.FC = () => {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { language } = useTranslation();
+  const isEn = language === "en";
 
   // Form states
   const [nombre, setNombre] = useState("");
@@ -45,7 +48,7 @@ export const Catalogo: React.FC = () => {
       setProductos(prods);
       setProveedores(provs);
     } catch (err: any) {
-      setError("Error al cargar datos del catálogo");
+      setError(isEn ? "Error loading catalog data" : "Error al cargar datos del catálogo");
     } finally {
       setLoading(false);
     }
@@ -58,7 +61,7 @@ export const Catalogo: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre || !precioVenta) {
-      setError("Nombre y Precio de Venta son requeridos");
+      setError(isEn ? "Name and Sale Price are required" : "Nombre y Precio de Venta son requeridos");
       return;
     }
 
@@ -94,7 +97,7 @@ export const Catalogo: React.FC = () => {
       setError("");
       loadData();
     } catch (err: any) {
-      setError(err.message || "Error al guardar el producto");
+      setError(err.message || (isEn ? "Error saving product" : "Error al guardar el producto"));
     }
   };
 
@@ -128,12 +131,12 @@ export const Catalogo: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("¿Está seguro de eliminar este producto del catálogo?")) return;
+    if (!window.confirm(isEn ? "Are you sure you want to delete this product from the catalog?" : "¿Está seguro de eliminar este producto del catálogo?")) return;
     try {
       await api.productos.delete(id);
       loadData();
     } catch (err: any) {
-      alert(err.message || "No se pudo eliminar el producto");
+      alert(err.message || (isEn ? "Could not delete product" : "No se pudo eliminar el producto"));
     }
   };
 
@@ -141,8 +144,10 @@ export const Catalogo: React.FC = () => {
     <div className="animate-fade-in view-layout">
       <div className="view-header">
         <div>
-          <h1 className="page-title">Gestión de Catálogo</h1>
-          <p className="page-subtitle">Administra los platos, insumos y catálogo general del restaurante</p>
+          <h1 className="page-title">{isEn ? "Catalog Management" : "Gestión de Catálogo"}</h1>
+          <p className="page-subtitle">
+            {isEn ? "Manage dishes, ingredients, and the general menu of the restaurant" : "Administra los platos, insumos y catálogo general del restaurante"}
+          </p>
         </div>
         <button className="btn btn-primary" onClick={() => {
           if (formOpen && editingProductoId !== null) {
@@ -152,7 +157,7 @@ export const Catalogo: React.FC = () => {
           }
         }}>
           <Plus size={18} />
-          {formOpen ? "Ocultar Formulario" : "Nuevo Producto"}
+          {formOpen ? (isEn ? "Hide Form" : "Ocultar Formulario") : (isEn ? "New Product" : "Nuevo Producto")}
         </button>
       </div>
 
@@ -161,16 +166,16 @@ export const Catalogo: React.FC = () => {
       {formOpen && (
         <form onSubmit={handleSubmit} className="glass-panel form-card animate-fade-in">
           <h2 className="form-title">
-            {editingProductoId !== null ? "📝 Modificar Producto" : "➕ Registrar Nuevo Producto"}
+            {editingProductoId !== null ? (isEn ? "📝 Edit Product" : "📝 Modificar Producto") : (isEn ? "➕ Register New Product" : "➕ Registrar Nuevo Producto")}
           </h2>
           
           <div className="form-grid">
             <div className="form-group">
-              <label className="form-label">Nombre del Producto</label>
+              <label className="form-label">{isEn ? "Product Name" : "Nombre del Producto"}</label>
               <input
                 type="text"
                 className="input-field"
-                placeholder="Ej. Lomo Saltado"
+                placeholder={isEn ? "e.g. Lomo Saltado" : "Ej. Lomo Saltado"}
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 required
@@ -179,7 +184,7 @@ export const Catalogo: React.FC = () => {
 
             <div className="form-grid-2">
               <div className="form-group">
-                <label className="form-label">Categoría</label>
+                <label className="form-label">{isEn ? "Category" : "Categoría"}</label>
                 <select
                   className="input-field"
                   value={categoriaSelect}
@@ -193,18 +198,18 @@ export const Catalogo: React.FC = () => {
                     }
                   }}
                 >
-                  <option value="">-- Seleccionar Categoría --</option>
+                  <option value="">-- {isEn ? "Select Category" : "Seleccionar Categoría"} --</option>
                   {uniqueCategorias.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
+                    <option key={cat} value={cat}>{isEn && cat === "Bebidas" ? "Drinks" : isEn && cat === "Entradas" ? "Starters" : isEn && cat === "Platos Principales" ? "Main Dishes" : isEn && cat === "Postres" ? "Desserts" : cat}</option>
                   ))}
-                  <option value="__new__">➕ Escribir nueva categoría...</option>
+                  <option value="__new__">➕ {isEn ? "Write new category..." : "Escribir nueva categoría..."}</option>
                 </select>
                 {categoriaSelect === "__new__" && (
                   <input
                     type="text"
                     style={{ marginTop: "8px" }}
                     className="input-field"
-                    placeholder="Escribe la nueva categoría"
+                    placeholder={isEn ? "Type the new category" : "Escribe la nueva categoría"}
                     value={categoria}
                     onChange={(e) => setCategoria(e.target.value)}
                     required
@@ -212,7 +217,7 @@ export const Catalogo: React.FC = () => {
                 )}
               </div>
               <div className="form-group">
-                <label className="form-label">Subcategoría</label>
+                <label className="form-label">{isEn ? "Subcategory" : "Subcategoría"}</label>
                 <select
                   className="input-field"
                   value={subcategoriaSelect}
@@ -226,18 +231,18 @@ export const Catalogo: React.FC = () => {
                     }
                   }}
                 >
-                  <option value="">-- Seleccionar Subcategoría --</option>
+                  <option value="">-- {isEn ? "Select Subcategory" : "Seleccionar Subcategoría"} --</option>
                   {uniqueSubcategorias.map((sub) => (
                     <option key={sub} value={sub}>{sub}</option>
                   ))}
-                  <option value="__new__">➕ Escribir nueva subcategoría...</option>
+                  <option value="__new__">➕ {isEn ? "Write new subcategory..." : "Escribir nueva subcategoría..."}</option>
                 </select>
                 {subcategoriaSelect === "__new__" && (
                   <input
                     type="text"
                     style={{ marginTop: "8px" }}
                     className="input-field"
-                    placeholder="Escribe la nueva subcategoría"
+                    placeholder={isEn ? "Type the new subcategory" : "Escribe la nueva subcategoría"}
                     value={subcategoria}
                     onChange={(e) => setSubcategoria(e.target.value)}
                     required
@@ -248,7 +253,7 @@ export const Catalogo: React.FC = () => {
 
             <div className="form-grid-2">
               <div className="form-group">
-                <label className="form-label">Precio de Venta ($)</label>
+                <label className="form-label">{isEn ? "Sale Price ($)" : "Precio de Venta ($)"}</label>
                 <input
                   type="number"
                   step="0.01"
@@ -261,7 +266,7 @@ export const Catalogo: React.FC = () => {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Costo de Producción ($)</label>
+                <label className="form-label">{isEn ? "Production Cost ($)" : "Costo de Producción ($)"}</label>
                 <input
                   type="number"
                   step="0.01"
@@ -276,7 +281,7 @@ export const Catalogo: React.FC = () => {
 
             <div className="form-grid-2">
               <div className="form-group">
-                <label className="form-label">Tiempo Prep. Estimado (HH:MM:SS)</label>
+                <label className="form-label">{isEn ? "Estimated Prep. Time (HH:MM:SS)" : "Tiempo Prep. Estimado (HH:MM:SS)"}</label>
                 <input
                   type="text"
                   className="input-field"
@@ -286,16 +291,16 @@ export const Catalogo: React.FC = () => {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Proveedor</label>
+                <label className="form-label">{isEn ? "Supplier" : "Proveedor"}</label>
                 <select
                   className="input-field select-field"
                   value={proveedorId}
                   onChange={(e) => setProveedorId(e.target.value)}
                 >
-                  <option value="">-- Sin Proveedor --</option>
+                  <option value="">-- {isEn ? "No Supplier" : "Sin Proveedor"} --</option>
                   {proveedores.map((p) => (
                     <option key={p.proveedorId} value={p.proveedorId}>
-                      {p.nombre} ({p.tipoInsumo || "Insumos"})
+                      {p.nombre} ({p.tipoInsumo || (isEn ? "Ingredients" : "Insumos")})
                     </option>
                   ))}
                 </select>
@@ -305,10 +310,10 @@ export const Catalogo: React.FC = () => {
 
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={handleCancel}>
-              Cancelar
+              {isEn ? "Cancel" : "Cancelar"}
             </button>
             <button type="submit" className="btn btn-primary">
-              {editingProductoId !== null ? "Guardar Cambios" : "Guardar Producto"}
+              {editingProductoId !== null ? (isEn ? "Save Changes" : "Guardar Cambios") : (isEn ? "Save Product" : "Guardar Producto")}
             </button>
           </div>
         </form>
@@ -318,28 +323,28 @@ export const Catalogo: React.FC = () => {
         {loading ? (
           <div className="loading-container">
             <div className="spinner"></div>
-            <span>Cargando productos del catálogo...</span>
+            <span>{isEn ? "Loading catalog products..." : "Cargando productos del catálogo..."}</span>
           </div>
         ) : productos.length === 0 ? (
           <div className="empty-container">
             <Package size={48} className="empty-icon" />
-            <h3>No hay productos registrados</h3>
-            <p>Comience a agregar platos y bebidas a su catálogo.</p>
+            <h3>{isEn ? "No products registered" : "No hay productos registrados"}</h3>
+            <p>{isEn ? "Start adding dishes and drinks to your catalog." : "Comience a agregar platos y bebidas a su catálogo."}</p>
           </div>
         ) : (
           <div className="table-container">
             <table className="custom-table">
               <thead>
                 <tr>
-                  <th>Nombre</th>
-                  <th>Categoría</th>
-                  <th>Subcategoría</th>
-                  <th>Precio Venta</th>
-                  <th>Costo Prod.</th>
-                  <th>Tiempo Prep.</th>
-                  <th>Proveedor</th>
-                  <th>Insumos Requeridos</th>
-                  <th style={{ textAlign: "center" }}>Acciones</th>
+                  <th>{isEn ? "Name" : "Nombre"}</th>
+                  <th>{isEn ? "Category" : "Categoría"}</th>
+                  <th>{isEn ? "Subcategory" : "Subcategoría"}</th>
+                  <th>{isEn ? "Sale Price" : "Precio Venta"}</th>
+                  <th>{isEn ? "Prod. Cost" : "Costo Prod."}</th>
+                  <th>{isEn ? "Prep. Time" : "Tiempo Prep."}</th>
+                  <th>{isEn ? "Supplier" : "Proveedor"}</th>
+                  <th>{isEn ? "Required Ingredients" : "Insumos Requeridos"}</th>
+                  <th style={{ textAlign: "center" }}>{isEn ? "Actions" : "Acciones"}</th>
                 </tr>
                 <tr className="filter-row">
                   <td></td>
@@ -349,9 +354,9 @@ export const Catalogo: React.FC = () => {
                       value={filterCategoria}
                       onChange={(e) => setFilterCategoria(e.target.value)}
                     >
-                      <option value="">Todas las categorías</option>
+                      <option value="">{isEn ? "All categories" : "Todas las categorías"}</option>
                       {uniqueCategorias.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
+                        <option key={cat} value={cat}>{isEn && cat === "Bebidas" ? "Drinks" : isEn && cat === "Entradas" ? "Starters" : isEn && cat === "Platos Principales" ? "Main Dishes" : isEn && cat === "Postres" ? "Desserts" : cat}</option>
                       ))}
                     </select>
                   </td>
@@ -361,7 +366,7 @@ export const Catalogo: React.FC = () => {
                       value={filterSubcategoria}
                       onChange={(e) => setFilterSubcategoria(e.target.value)}
                     >
-                      <option value="">Todas las subcategorías</option>
+                      <option value="">{isEn ? "All subcategories" : "Todas las subcategorías"}</option>
                       {uniqueSubcategorias.map(sub => (
                         <option key={sub} value={sub}>{sub}</option>
                       ))}
@@ -380,7 +385,7 @@ export const Catalogo: React.FC = () => {
                   <tr key={prod.productoId}>
                     <td className="font-bold text-white">{prod.nombre}</td>
                     <td>
-                      <span className="badge badge-primary">{prod.categoria || "General"}</span>
+                      <span className="badge badge-primary">{isEn && prod.categoria === "Bebidas" ? "Drinks" : isEn && prod.categoria === "Entradas" ? "Starters" : isEn && prod.categoria === "Platos Principales" ? "Main Dishes" : isEn && prod.categoria === "Postres" ? "Desserts" : (prod.categoria || "General")}</span>
                     </td>
                     <td>{prod.subcategoria || "-"}</td>
                     <td className="text-success font-bold">${prod.precioVenta.toFixed(2)}</td>
@@ -396,7 +401,7 @@ export const Catalogo: React.FC = () => {
                             </span>
                           ))
                         ) : (
-                          <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>Sin insumos</span>
+                          <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>{isEn ? "No ingredients" : "Sin insumos"}</span>
                         )}
                       </div>
                     </td>
@@ -405,14 +410,14 @@ export const Catalogo: React.FC = () => {
                         <button
                           className="btn-icon btn-icon-warning"
                           onClick={() => handleStartEdit(prod)}
-                          title="Modificar producto"
+                          title={isEn ? "Edit product" : "Modificar producto"}
                         >
                           <Pencil size={16} />
                         </button>
                         <button
                           className="btn-icon btn-icon-danger"
                           onClick={() => handleDelete(prod.productoId)}
-                          title="Eliminar producto"
+                          title={isEn ? "Delete product" : "Eliminar producto"}
                         >
                           <Trash2 size={16} />
                         </button>

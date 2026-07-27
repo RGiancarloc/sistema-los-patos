@@ -2,12 +2,15 @@ import React, { useState, useEffect } from "react";
 import { api } from "../api";
 import type { Cliente } from "../api";
 import { Plus, Trash2, Search, User, Pencil } from "lucide-react";
+import { useTranslation } from "../LanguageContext";
 
 export const Clientes: React.FC = () => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const { language } = useTranslation();
+  const isEn = language === "en";
 
   // Form states
   const [nombre, setNombre] = useState("");
@@ -24,7 +27,7 @@ export const Clientes: React.FC = () => {
       const data = await api.clientes.getAll(term);
       setClientes(data);
     } catch (err: any) {
-      setError("Error al cargar los clientes");
+      setError(isEn ? "Error loading customers" : "Error al cargar los clientes");
     } finally {
       setLoading(false);
     }
@@ -43,7 +46,7 @@ export const Clientes: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre) {
-      setError("El nombre es requerido");
+      setError(isEn ? "Name is required" : "El nombre es requerido");
       return;
     }
 
@@ -73,7 +76,7 @@ export const Clientes: React.FC = () => {
       setError("");
       loadClientes();
     } catch (err: any) {
-      setError(err.message || "Error al guardar el cliente");
+      setError(err.message || (isEn ? "Error saving customer" : "Error al guardar el cliente"));
     }
   };
 
@@ -99,12 +102,12 @@ export const Clientes: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("¿Está seguro de eliminar este cliente?")) return;
+    if (!window.confirm(isEn ? "Are you sure you want to delete this customer?" : "¿Está seguro de eliminar este cliente?")) return;
     try {
       await api.clientes.delete(id);
       loadClientes();
     } catch (err: any) {
-      alert(err.message || "No se pudo eliminar el cliente");
+      alert(err.message || (isEn ? "Could not delete customer" : "No se pudo eliminar el cliente"));
     }
   };
 
@@ -112,8 +115,12 @@ export const Clientes: React.FC = () => {
     <div className="animate-fade-in view-layout">
       <div className="view-header">
         <div>
-          <h1 className="page-title">Gestión de Clientes</h1>
-          <p className="page-subtitle">Visualiza, busca y administra el historial y preferencias de tus clientes</p>
+          <h1 className="page-title">{isEn ? "Customer Management" : "Gestión de Clientes"}</h1>
+          <p className="page-subtitle">
+            {isEn 
+              ? "View, search, and manage your customers' history and preferences" 
+              : "Visualiza, busca y administra el historial y preferencias de tus clientes"}
+          </p>
         </div>
         <button className="btn btn-primary" onClick={() => {
           if (formOpen && editingClienteId !== null) {
@@ -123,7 +130,7 @@ export const Clientes: React.FC = () => {
           }
         }}>
           <Plus size={18} />
-          {formOpen ? "Ocultar Formulario" : "Nuevo Cliente"}
+          {formOpen ? (isEn ? "Hide Form" : "Ocultar Formulario") : (isEn ? "New Customer" : "Nuevo Cliente")}
         </button>
       </div>
 
@@ -134,7 +141,7 @@ export const Clientes: React.FC = () => {
         <input
           type="text"
           className="search-input"
-          placeholder="Buscar clientes por nombre o correo..."
+          placeholder={isEn ? "Search customers by name or email..." : "Buscar clientes por nombre o correo..."}
           value={search}
           onChange={handleSearchChange}
         />
@@ -143,28 +150,30 @@ export const Clientes: React.FC = () => {
       {formOpen && (
         <form onSubmit={handleSubmit} className="glass-panel form-card animate-fade-in">
           <h2 className="form-title">
-            {editingClienteId !== null ? "📝 Modificar Cliente" : "👥 Registrar Nuevo Cliente"}
+            {editingClienteId !== null 
+              ? (isEn ? "📝 Edit Customer" : "📝 Modificar Cliente") 
+              : (isEn ? "👥 Register New Customer" : "👥 Registrar Nuevo Cliente")}
           </h2>
           
           <div className="form-grid">
             <div className="form-grid-2">
               <div className="form-group">
-                <label className="form-label">Nombre Completo</label>
+                <label className="form-label">{isEn ? "Full Name" : "Nombre Completo"}</label>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="Ej. María Rojas"
+                  placeholder={isEn ? "e.g. Maria Rojas" : "Ej. María Rojas"}
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   required
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Correo Electrónico</label>
+                <label className="form-label">{isEn ? "Email Address" : "Correo Electrónico"}</label>
                 <input
                   type="email"
                   className="input-field"
-                  placeholder="Ej. maria@correo.com"
+                  placeholder={isEn ? "e.g. maria@email.com" : "Ej. maria@correo.com"}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -173,39 +182,39 @@ export const Clientes: React.FC = () => {
 
             <div className="form-grid-2">
               <div className="form-group">
-                <label className="form-label">Segmentación</label>
+                <label className="form-label">{isEn ? "Segmentation" : "Segmentación"}</label>
                 <select
                   className="input-field select-field"
                   value={segmento}
                   onChange={(e) => setSegmento(e.target.value)}
                 >
-                  <option value="nuevo">Nuevo</option>
-                  <option value="recurrente">Recurrente</option>
+                  <option value="nuevo">{isEn ? "New" : "Nuevo"}</option>
+                  <option value="recurrente">{isEn ? "Recurring" : "Recurrente"}</option>
                   <option value="VIP">VIP</option>
-                  <option value="corporativo">Corporativo</option>
+                  <option value="corporativo">{isEn ? "Corporate" : "Corporativo"}</option>
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">Método de Pago Habitual</label>
+                <label className="form-label">{isEn ? "Preferred Payment Method" : "Método de Pago Habitual"}</label>
                 <select
                   className="input-field select-field"
                   value={metodoPago}
                   onChange={(e) => setMetodoPago(e.target.value)}
                 >
-                  <option value="efectivo">Efectivo</option>
-                  <option value="tarjeta">Tarjeta de Crédito/Débito</option>
-                  <option value="transferencia">Transferencia Bancaria</option>
+                  <option value="efectivo">{isEn ? "Cash" : "Efectivo"}</option>
+                  <option value="tarjeta">{isEn ? "Credit/Debit Card" : "Tarjeta de Crédito/Débito"}</option>
+                  <option value="transferencia">{isEn ? "Bank Transfer" : "Transferencia Bancaria"}</option>
                   <option value="yape/plin">Yape / Plin</option>
                 </select>
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Preferencias / Notas Especiales</label>
+              <label className="form-label">{isEn ? "Preferences / Special Notes" : "Preferencias / Notas Especiales"}</label>
               <textarea
                 className="input-field textarea-field"
                 rows={3}
-                placeholder="Ej. Alérgica a los mariscos, prefiere mesa en la terraza..."
+                placeholder={isEn ? "e.g. Seafood allergy, prefers terrace table..." : "Ej. Alérgica a los mariscos, prefiere mesa en la terraza..."}
                 value={preferencias}
                 onChange={(e) => setPreferencias(e.target.value)}
               />
@@ -214,10 +223,10 @@ export const Clientes: React.FC = () => {
 
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={handleCancel}>
-              Cancelar
+              {isEn ? "Cancel" : "Cancelar"}
             </button>
             <button type="submit" className="btn btn-primary">
-              {editingClienteId !== null ? "Guardar Cambios" : "Guardar Cliente"}
+              {editingClienteId !== null ? (isEn ? "Save Changes" : "Guardar Cambios") : (isEn ? "Save Customer" : "Guardar Cliente")}
             </button>
           </div>
         </form>
@@ -227,25 +236,25 @@ export const Clientes: React.FC = () => {
         {loading ? (
           <div className="loading-container">
             <div className="spinner"></div>
-            <span>Buscando en el registro de clientes...</span>
+            <span>{isEn ? "Searching customer records..." : "Buscando en el registro de clientes..."}</span>
           </div>
         ) : clientes.length === 0 ? (
           <div className="empty-container">
             <User size={48} className="empty-icon" />
-            <h3>No se encontraron clientes</h3>
-            <p>Registre clientes para personalizar sus servicios y emitir facturas con facilidad.</p>
+            <h3>{isEn ? "No customers found" : "No se encontraron clientes"}</h3>
+            <p>{isEn ? "Register customers to customize services and issue receipts easily." : "Registre clientes para personalizar sus servicios y emitir facturas con facilidad."}</p>
           </div>
         ) : (
           <div className="table-container">
             <table className="custom-table">
               <thead>
                 <tr>
-                  <th>Nombre</th>
+                  <th>{isEn ? "Name" : "Nombre"}</th>
                   <th>Email</th>
-                  <th>Segmento</th>
-                  <th>Método Pago</th>
-                  <th>Preferencias / Notas</th>
-                  <th style={{ textAlign: "center" }}>Acciones</th>
+                  <th>{isEn ? "Segment" : "Segmento"}</th>
+                  <th>{isEn ? "Payment Method" : "Método Pago"}</th>
+                  <th>{isEn ? "Preferences / Notes" : "Preferencias / Notas"}</th>
+                  <th style={{ textAlign: "center" }}>{isEn ? "Actions" : "Acciones"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -258,10 +267,17 @@ export const Clientes: React.FC = () => {
                         cliente.segmento === "VIP" ? "badge-warning" : 
                         cliente.segmento === "recurrente" ? "badge-primary" : "badge-success"
                       }`}>
-                        {cliente.segmento}
+                        {isEn && cliente.segmento === "recurrente" ? "recurring" : 
+                         isEn && cliente.segmento === "nuevo" ? "new" : 
+                         isEn && cliente.segmento === "corporativo" ? "corporate" : cliente.segmento}
                       </span>
                     </td>
-                    <td>{cliente.metodoPagoHabitual || "tarjeta"}</td>
+                    <td>
+                      {isEn && cliente.metodoPagoHabitual === "efectivo" ? "cash" : 
+                       isEn && cliente.metodoPagoHabitual === "tarjeta" ? "card" : 
+                       isEn && cliente.metodoPagoHabitual === "transferencia" ? "transfer" : 
+                       cliente.metodoPagoHabitual || "card"}
+                    </td>
                     <td className="text-muted" style={{ maxWidth: "250px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {cliente.preferencias || "-"}
                     </td>
@@ -270,14 +286,14 @@ export const Clientes: React.FC = () => {
                         <button
                           className="btn-icon btn-icon-warning"
                           onClick={() => handleStartEdit(cliente)}
-                          title="Modificar cliente"
+                          title={isEn ? "Edit customer" : "Modificar cliente"}
                         >
                           <Pencil size={16} />
                         </button>
                         <button
                           className="btn-icon btn-icon-danger"
                           onClick={() => handleDelete(cliente.clienteId)}
-                          title="Eliminar cliente"
+                          title={isEn ? "Delete customer" : "Eliminar cliente"}
                         >
                           <Trash2 size={16} />
                         </button>
