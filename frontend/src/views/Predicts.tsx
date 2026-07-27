@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "../LanguageContext";
+import { API_BASE, BACKEND_URL } from "../api";
 
 
 import { 
@@ -120,7 +121,7 @@ export const Predicts: React.FC = () => {
   // FETCH FORECAST DIRECTLY
   const fetchForecast = async () => {
     try {
-      const res = await fetch(`http://localhost:8000/api/predicts/forecast?lang=${language}`);
+      const res = await fetch(`${API_BASE}/predicts/forecast?lang=${language}`);
       if (res.ok) {
         const data = await res.json();
         setPredictions(data || []);
@@ -134,7 +135,7 @@ export const Predicts: React.FC = () => {
   const handleCompareModels = async () => {
     setComparing(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/predicts/train?lang=${language}`, {
+      const res = await fetch(`${API_BASE}/predicts/train?lang=${language}`, {
         method: "POST"
       });
       if (!res.ok) throw new Error("Error en el servidor");
@@ -167,7 +168,7 @@ export const Predicts: React.FC = () => {
   const handleGeneratePredictions = async () => {
     setGenerating(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/predicts/forecast?lang=${language}`);
+      const res = await fetch(`${API_BASE}/predicts/forecast?lang=${language}`);
       if (!res.ok) throw new Error("Error en el servidor");
       const data = await res.json();
       setPredictions(data || []);
@@ -183,7 +184,7 @@ export const Predicts: React.FC = () => {
   const handleOptimizeHyperparameters = async () => {
     setOptimizing(true);
     try {
-      const res = await fetch("http://localhost:8000/api/predicts/tune", {
+      const res = await fetch(`${API_BASE}/predicts/tune`, {
         method: "POST"
       });
       if (!res.ok) throw new Error("Error en el tuning");
@@ -201,7 +202,7 @@ export const Predicts: React.FC = () => {
   const handleStatisticalValidation = async () => {
     setValidating(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/predicts/statistical_tests?lang=${language}`);
+      const res = await fetch(`${API_BASE}/predicts/statistical_tests?lang=${language}`);
       if (!res.ok) throw new Error("Error en test");
       const data = await res.json();
       setStatTests(data || []);
@@ -217,7 +218,7 @@ export const Predicts: React.FC = () => {
   const handleRunCrossValidation = async () => {
     setRunningCv(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/predicts/cross_validation?folds=${cvFolds}`);
+      const res = await fetch(`${API_BASE}/predicts/cross_validation?folds=${cvFolds}`);
       if (!res.ok) throw new Error("Error en CV");
       const data = await res.json();
       const rows: CrossValidationRow[] = Object.entries(data).map(([key, val]: [string, any]) => ({
@@ -240,7 +241,7 @@ export const Predicts: React.FC = () => {
   const handleLoadEda = async () => {
     setLoadingEda(true);
     try {
-      const res = await fetch("http://localhost:8000/api/predicts/eda");
+      const res = await fetch(`${API_BASE}/predicts/eda`);
       if (!res.ok) throw new Error("Error en EDA");
       const data = await res.json();
       setEdaStats(data);
@@ -295,15 +296,15 @@ export const Predicts: React.FC = () => {
         {/* Reports Download Area */}
         <div className="download-reports-area">
           <span className="download-label">{isEn ? "Download Reports:" : "Descargar Reportes Científicos:"}</span>
-          <a href={`http://localhost:8000/api/predicts/reports/pdf?lang=${language}`} target="_blank" rel="noreferrer" className="btn-report-download pdf">
+          <a href={`${API_BASE}/predicts/reports/pdf?lang=${language}`} target="_blank" rel="noreferrer" className="btn-report-download pdf">
             <FileText size={16} />
             PDF
           </a>
-          <a href={`http://localhost:8000/api/predicts/reports/word?lang=${language}`} target="_blank" rel="noreferrer" className="btn-report-download docx">
+          <a href={`${API_BASE}/predicts/reports/word?lang=${language}`} target="_blank" rel="noreferrer" className="btn-report-download docx">
             <FileText size={16} />
             Word
           </a>
-          <a href={`http://localhost:8000/api/predicts/reports/excel?lang=${language}`} target="_blank" rel="noreferrer" className="btn-report-download xlsx">
+          <a href={`${API_BASE}/predicts/reports/excel?lang=${language}`} target="_blank" rel="noreferrer" className="btn-report-download xlsx">
             <FileSpreadsheet size={16} />
             Excel
           </a>
@@ -438,7 +439,7 @@ export const Predicts: React.FC = () => {
                   </p>
                   <div className="image-wrapper">
                     <img 
-                      src={`http://localhost:8000/static/img/confusion_matrix${language === "en" ? "_en" : ""}.png?v=${chartsVersion}`} 
+                      src={`${BACKEND_URL}/static/img/confusion_matrix${language === "en" ? "_en" : ""}.png?v=${chartsVersion}`} 
                       alt="Matriz de Confusión" 
                       className="real-chart-img"
                     />
@@ -452,7 +453,7 @@ export const Predicts: React.FC = () => {
                   </p>
                   <div className="image-wrapper">
                     <img 
-                      src={`http://localhost:8000/static/img/roc_curve${language === "en" ? "_en" : ""}.png?v=${chartsVersion}`} 
+                      src={`${BACKEND_URL}/static/img/roc_curve${language === "en" ? "_en" : ""}.png?v=${chartsVersion}`} 
                       alt="Curva ROC" 
                       className="real-chart-img"
                     />
@@ -466,7 +467,7 @@ export const Predicts: React.FC = () => {
                   </p>
                   <div className="image-wrapper">
                     <img 
-                      src={`http://localhost:8000/static/img/heatmap_corr${language === "en" ? "_en" : ""}.png?v=${chartsVersion}`} 
+                      src={`${BACKEND_URL}/static/img/heatmap_corr${language === "en" ? "_en" : ""}.png?v=${chartsVersion}`} 
                       alt="Mapa de Calor Comparativo de Métricas" 
                       className="real-chart-img"
                     />

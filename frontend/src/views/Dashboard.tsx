@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { api, type Usuario, type KpisResponse } from "../api";
+import { api, type Usuario, type KpisResponse, API_BASE } from "../api";
 import { 
   DollarSign, 
   ShoppingCart, 
@@ -38,7 +38,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ usuario, setVistaActual })
 
   const loadForecast = async () => {
     try {
-      const response = await fetch(`http://localhost:8000/api/predicts/forecast?lang=${language}`);
+      const response = await fetch(`${API_BASE}/predicts/forecast?lang=${language}`);
       if (response.ok) {
         const data = await response.json();
         if (data && data.length > 0) {

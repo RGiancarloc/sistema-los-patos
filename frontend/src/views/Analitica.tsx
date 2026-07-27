@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { api } from "../api";
+import { api, API_BASE } from "../api";
 import type { KpisResponse } from "../api";
 import { BarChart3, Calendar, RefreshCcw, FileDown, TrendingUp, Pizza, DollarSign } from "lucide-react";
 import { useTranslation } from "../LanguageContext";
@@ -198,7 +198,7 @@ export const Analitica: React.FC = () => {
     if (selectedYear) params.push(`year=${selectedYear}`);
     if (selectedMonth) params.push(`month=${encodeURIComponent(selectedMonth)}`);
     const query = `?${params.join("&")}`;
-    window.open(`http://${window.location.hostname}:8000/api/analitica/reporte_pdf${query}`, "_blank");
+    window.open(`${API_BASE}/analitica/reporte_pdf${query}`, "_blank");
   };
 
   const drawChart = (data: { label: string; value: number }[]) => {
