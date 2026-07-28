@@ -1,4 +1,5 @@
-export const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL as string) || (typeof window !== "undefined" ? `http://${window.location.hostname}:8000` : "http://localhost:8000");
+const rawBackendUrl = (import.meta.env.VITE_BACKEND_URL as string) || (typeof window !== "undefined" ? `http://${window.location.hostname}:8000` : "http://localhost:8000");
+export const BACKEND_URL = rawBackendUrl.replace(/\/$/, "");
 export const API_BASE = `${BACKEND_URL}/api`;
 
 export interface Usuario {
